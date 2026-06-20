@@ -1,41 +1,58 @@
-// "History" tab: collapsible month/year accordion of past expenses, each group rendering PeriodPanel.
+// "History" tab: collapsible month/year accordion of past expenses/income, each group rendering PeriodPanel.
 import { useMemo, useState } from "react";
-import { useExpenses, useIncomes, useUpdateIncome, type Expense } from "@/lib/finance-data";
+import { useExpenses, useIncomes, useBudgets, type Expense, type Income, type Budget } from "@/lib/finance-data";
 import { PeriodPanel } from "@/components/PeriodPanel";
+
+function groupKey(dateStr: string, granularity: "month" | "year") {
+  const d = new Date(dateStr);
+  return granularity === "month"
+    ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    : String(d.getFullYear());
+}
+
+function groupByKey<T extends { date: string }>(items: T[], granularity: "month" | "year") {
+  const m = new Map<string, T[]>();
+  items.forEach((item) => {
+    const key = groupKey(item.date, granularity);
+    const arr = m.get(key) ?? [];
+    arr.push(item);
+    m.set(key, arr);
+  });
+  return m;
+}
+
+// Budgets don't have a `date`, just year/month, so they get their own grouping key.
+function groupBudgetsByKey(items: Budget[], granularity: "month" | "year") {
+  const m = new Map<string, Budget[]>();
+  items.forEach((item) => {
+    const key = granularity === "month" ? `${item.year}-${String(item.month).padStart(2, "0")}` : String(item.year);
+    const arr = m.get(key) ?? [];
+    arr.push(item);
+    m.set(key, arr);
+  });
+  return m;
+}
 
 export function HistoryView({ userId }: { userId: string }) {
   const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
   const { data: incomesAll = [], isLoading: incomesLoading } = useIncomes(userId);
-  const updateIncome = useUpdateIncome(userId);
+  const { data: budgetsAll = [], isLoading: budgetsLoading } = useBudgets(userId);
   const [granularity, setGranularity] = useState<"month" | "year">("month");
   const [open, setOpen] = useState<string | null | undefined>(undefined);
 
+  const expenseGroups = useMemo(() => groupByKey(expensesAll, granularity), [expensesAll, granularity]);
+  const incomeGroups = useMemo(() => groupByKey(incomesAll, granularity), [incomesAll, granularity]);
+  const budgetGroups = useMemo(() => groupBudgetsByKey(budgetsAll, granularity), [budgetsAll, granularity]);
+
+  // A period appears in History if it has expenses OR income — not just expenses.
   const groups = useMemo(() => {
-    const m = new Map<string, Expense[]>();
-    expensesAll.forEach((e) => {
-      const d = new Date(e.date);
-      const key =
-        granularity === "month"
-          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-          : String(d.getFullYear());
-      const arr = m.get(key) ?? [];
-      arr.push(e);
-      m.set(key, arr);
-    });
-    return Array.from(m.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
-  }, [expensesAll, granularity]);
+    const keys = new Set([...expenseGroups.keys(), ...incomeGroups.keys()]);
+    return Array.from(keys)
+      .map((key): [string, Expense[]] => [key, expenseGroups.get(key) ?? []])
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1));
+  }, [expenseGroups, incomeGroups]);
 
   const effectiveOpen = open === undefined ? groups[0]?.[0] ?? null : open;
-
-  // Year groups show the read-only sum of that year's months; month groups show (and allow
-  // fixing) that specific month's recorded income.
-  function incomeForKey(key: string): number {
-    if (granularity === "year") {
-      return incomesAll.filter((i) => i.year === Number(key)).reduce((a, i) => a + i.amount, 0);
-    }
-    const [y, m] = key.split("-").map(Number);
-    return incomesAll.find((i) => i.year === y && i.month === m)?.amount ?? 0;
-  }
 
   function pretty(key: string) {
     if (granularity === "year") return key;
@@ -46,7 +63,9 @@ export function HistoryView({ userId }: { userId: string }) {
     });
   }
 
-  if (expensesLoading || incomesLoading) return <p className="text-sm text-muted-foreground">Loading...</p>;
+  if (expensesLoading || incomesLoading || budgetsLoading) {
+    return <p className="text-sm text-muted-foreground">Loading...</p>;
+  }
 
   return (
     <div className="space-y-6">
@@ -77,6 +96,10 @@ export function HistoryView({ userId }: { userId: string }) {
         {groups.map(([key, items]) => {
           const total = items.reduce((a, e) => a + e.amount, 0);
           const isOpen = effectiveOpen === key;
+          const incomeItems: Income[] = incomeGroups.get(key) ?? [];
+          // Budgets are inherently monthly, so they only apply to month-granularity groups.
+          const budgetItems: Budget[] | undefined =
+            granularity === "month" ? budgetGroups.get(key) ?? [] : undefined;
           return (
             <div key={key} className="bg-card border border-border rounded-2xl overflow-hidden">
               <button
@@ -93,17 +116,10 @@ export function HistoryView({ userId }: { userId: string }) {
                 <div className="border-t border-border p-5">
                   <PeriodPanel
                     title={pretty(key)}
-                    expenses={items}
-                    income={incomeForKey(key)}
-                    editableIncome={granularity === "month"}
-                    onUpdateIncome={
-                      granularity === "month"
-                        ? (n) => {
-                            const [y, m] = key.split("-").map(Number);
-                            updateIncome.mutate({ year: y, month: m, amount: n });
-                          }
-                        : undefined
-                    }
+                    expenses={items as Expense[]}
+                    incomes={incomeItems}
+                    budgets={budgetItems}
+                    showTrend={granularity === "year"}
                     userId={userId}
                   />
                 </div>

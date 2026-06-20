@@ -13,34 +13,51 @@ export type Expense = {
   recurring_expense_id: string | null;
 };
 
+export type Budget = {
+  id: string;
+  year: number;
+  month: number; // 1-12
+  category: string;
+  amount: number;
+};
+
 export type RecurringExpense = {
   id: string;
   description: string;
   amount: number;
   category: string;
   active: boolean;
+  day_of_month: number | null; // 1-31; null = apply as soon as the new month is seen
 };
 
 export type RecurringIncome = {
   id: string;
   description: string;
   amount: number;
+  category: string;
   active: boolean;
+  day_of_month: number | null; // 1-31; null = apply as soon as the new month is seen
 };
 
 export type Income = {
-  year: number;
-  month: number; // 1-12
+  id: string;
   amount: number;
+  description: string;
+  category: string;
+  date: string; // ISO
+  recurring_income_id: string | null;
 };
 
-// Fetches every recorded month's income for the user; year totals are summed client-side
-// (same pattern as useExpenses below) since a year's income is just the sum of its months.
+// Itemized income entries — mirrors Expense/useExpenses exactly. Month/year totals are summed
+// client-side from these, same as expenses; there's no separate single editable "monthly income".
 export function useIncomes(userId: string | undefined) {
   return useQuery({
     queryKey: ["incomes", userId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("incomes").select("year, month, amount");
+      const { data, error } = await supabase
+        .from("incomes")
+        .select("id, amount, description, category, date, recurring_income_id")
+        .order("date", { ascending: false });
       if (error) throw error;
       return data as Income[];
     },
@@ -48,13 +65,33 @@ export function useIncomes(userId: string | undefined) {
   });
 }
 
+export function useAddIncome(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (income: Partial<Omit<Income, "id">> & Omit<Income, "id" | "recurring_income_id">) => {
+      const { error } = await supabase.from("incomes").insert({ user_id: userId, ...income });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incomes", userId] }),
+  });
+}
+
 export function useUpdateIncome(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (income: Income) => {
-      const { error } = await supabase
-        .from("incomes")
-        .upsert({ user_id: userId, ...income }, { onConflict: "user_id,year,month" });
+    mutationFn: async ({ id, ...updates }: Pick<Income, "id"> & Partial<Omit<Income, "id">>) => {
+      const { error } = await supabase.from("incomes").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incomes", userId] }),
+  });
+}
+
+export function useDeleteIncome(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("incomes").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incomes", userId] }),
@@ -81,6 +118,31 @@ export function useAddCategory(userId: string | undefined) {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["categories", userId] }),
+  });
+}
+
+// Separate category list for income (e.g. "Salary", "Freelance") — kept apart from expense
+// categories since they don't belong in the same list.
+export function useIncomeCategories(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["income_categories", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("income_categories").select("name").order("created_at");
+      if (error) throw error;
+      return data.map((c) => c.name) as string[];
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useAddIncomeCategory(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { error } = await supabase.from("income_categories").insert({ user_id: userId, name });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["income_categories", userId] }),
   });
 }
 
@@ -132,13 +194,52 @@ export function useDeleteExpense(userId: string | undefined) {
   });
 }
 
+// How much the user plans to spend per category each month — powers the "Plan" tab and the
+// Planned/Remaining columns on the Month view's expense breakdown. One row per category per month.
+export function useBudgets(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["budgets", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("budgets").select("id, year, month, category, amount");
+      if (error) throw error;
+      return data as Budget[];
+    },
+    enabled: !!userId,
+  });
+}
+
+// Upsert: setting a budget for a category that already has one this month just updates it.
+export function useSetBudget(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (budget: Omit<Budget, "id">) => {
+      const { error } = await supabase
+        .from("budgets")
+        .upsert({ user_id: userId, ...budget }, { onConflict: "user_id,year,month,category" });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["budgets", userId] }),
+  });
+}
+
+export function useDeleteBudget(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("budgets").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["budgets", userId] }),
+  });
+}
+
 export function useRecurringExpenses(userId: string | undefined) {
   return useQuery({
     queryKey: ["recurring_expenses", userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recurring_expenses")
-        .select("id, description, amount, category, active")
+        .select("id, description, amount, category, active, day_of_month")
         .order("created_at");
       if (error) throw error;
       return data as RecurringExpense[];
@@ -150,7 +251,9 @@ export function useRecurringExpenses(userId: string | undefined) {
 export function useAddRecurringExpense(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (item: Omit<RecurringExpense, "id" | "active">) => {
+    mutationFn: async (
+      item: Omit<RecurringExpense, "id" | "active" | "day_of_month"> & { day_of_month?: number | null }
+    ) => {
       const { error } = await supabase.from("recurring_expenses").insert({ user_id: userId, ...item });
       if (error) throw error;
     },
@@ -186,7 +289,7 @@ export function useRecurringIncomes(userId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recurring_incomes")
-        .select("id, description, amount, active")
+        .select("id, description, amount, category, active, day_of_month")
         .order("created_at");
       if (error) throw error;
       return data as RecurringIncome[];
@@ -198,7 +301,9 @@ export function useRecurringIncomes(userId: string | undefined) {
 export function useAddRecurringIncome(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (item: Omit<RecurringIncome, "id" | "active">) => {
+    mutationFn: async (
+      item: Omit<RecurringIncome, "id" | "active" | "day_of_month"> & { day_of_month?: number | null }
+    ) => {
       const { error } = await supabase.from("recurring_incomes").insert({ user_id: userId, ...item });
       if (error) throw error;
     },
@@ -228,16 +333,16 @@ export function useDeleteRecurringIncome(userId: string | undefined) {
   });
 }
 
-// Side-effect-only hook: each calendar month, materializes active recurring expenses into real
-// `expenses` rows (once each, tracked via recurring_expense_id) and fills that month's income
-// from active recurring incomes if it hasn't been set yet. Call once from Dashboard.
+// Side-effect-only hook: for the current calendar month, materializes active recurring expenses
+// and incomes into real `expenses`/`incomes` rows (once each, tracked via recurring_*_id so
+// revisiting the app never duplicates them). Call once from Dashboard.
 export function useApplyRecurring(userId: string | undefined) {
   const { data: recurringExpenses = [], isLoading: recurringExpensesLoading } = useRecurringExpenses(userId);
   const { data: recurringIncomes = [], isLoading: recurringIncomesLoading } = useRecurringIncomes(userId);
   const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
   const { data: incomesAll = [], isLoading: incomesLoading } = useIncomes(userId);
   const addExpense = useAddExpense(userId);
-  const updateIncome = useUpdateIncome(userId);
+  const addIncome = useAddIncome(userId);
   const appliedRef = useRef(new Set<string>());
 
   // Wait until all four queries have actually resolved at least once — otherwise this could see
@@ -253,6 +358,8 @@ export function useApplyRecurring(userId: string | undefined) {
 
     for (const r of recurringExpenses) {
       if (!r.active) continue;
+      // No day set = apply as soon as seen; otherwise wait until that day of the month arrives.
+      if (r.day_of_month != null && now.getDate() < r.day_of_month) continue;
       const key = `expense-${r.id}-${year}-${month}`;
       if (appliedRef.current.has(key)) continue;
       const alreadyApplied = expensesAll.some((e) => {
@@ -262,24 +369,37 @@ export function useApplyRecurring(userId: string | undefined) {
       });
       appliedRef.current.add(key);
       if (!alreadyApplied) {
+        const appliedDate = r.day_of_month ? new Date(year, month - 1, r.day_of_month) : now;
         addExpense.mutate({
           amount: r.amount,
           description: r.description,
           category: r.category,
-          date: now.toISOString(),
+          date: appliedDate.toISOString(),
           recurring_expense_id: r.id,
         });
       }
     }
 
-    const incomeKey = `income-${year}-${month}`;
-    const hasIncome = incomesAll.some((i) => i.year === year && i.month === month);
-    if (!hasIncome && !appliedRef.current.has(incomeKey)) {
-      const activeIncomes = recurringIncomes.filter((r) => r.active);
-      if (activeIncomes.length > 0) {
-        appliedRef.current.add(incomeKey);
-        const amount = activeIncomes.reduce((a, r) => a + r.amount, 0);
-        updateIncome.mutate({ year, month, amount });
+    for (const r of recurringIncomes) {
+      if (!r.active) continue;
+      if (r.day_of_month != null && now.getDate() < r.day_of_month) continue;
+      const key = `income-${r.id}-${year}-${month}`;
+      if (appliedRef.current.has(key)) continue;
+      const alreadyApplied = incomesAll.some((i) => {
+        if (i.recurring_income_id !== r.id) return false;
+        const d = new Date(i.date);
+        return d.getFullYear() === year && d.getMonth() + 1 === month;
+      });
+      appliedRef.current.add(key);
+      if (!alreadyApplied) {
+        const appliedDate = r.day_of_month ? new Date(year, month - 1, r.day_of_month) : now;
+        addIncome.mutate({
+          amount: r.amount,
+          description: r.description,
+          category: r.category,
+          date: appliedDate.toISOString(),
+          recurring_income_id: r.id,
+        });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

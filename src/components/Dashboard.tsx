@@ -1,13 +1,14 @@
-// Logged-in app shell: header/tabs/sign-out, switches between the Add/Recurring/Month/Year/History tabs.
+// Logged-in app shell: header/tabs/sign-out, switches between the Add/Recurring/Month/Plan/Year/History tabs.
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { useApplyRecurring } from "@/lib/finance-data";
 import { AddView } from "@/components/AddView";
 import { RecurringView } from "@/components/RecurringView";
 import { PeriodView } from "@/components/PeriodView";
+import { PlanView } from "@/components/PlanView";
 import { HistoryView } from "@/components/HistoryView";
 
-type Tab = "add" | "recurring" | "month" | "year" | "history";
+type Tab = "add" | "recurring" | "month" | "plan" | "year" | "history";
 
 export function Dashboard({
   userId,
@@ -32,6 +33,20 @@ export function Dashboard({
             {([
               ["add", "Add"],
               ["recurring", "Recurring"],
+              ["plan", "Plan"],
+            ] as [Tab, string][]).map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setTab(k)}
+                className={`px-3 py-1.5 rounded-md transition ${
+                  tab === k ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <div className="w-px h-5 bg-border mx-2" />
+            {([
               ["month", "Month"],
               ["year", "Year"],
               ["history", "History"],
@@ -61,6 +76,7 @@ export function Dashboard({
         {tab === "add" && <AddView userId={userId} email={email} />}
         {tab === "recurring" && <RecurringView userId={userId} />}
         {tab === "month" && <PeriodView mode="month" userId={userId} />}
+        {tab === "plan" && <PlanView userId={userId} />}
         {tab === "year" && <PeriodView mode="year" userId={userId} />}
         {tab === "history" && <HistoryView userId={userId} />}
       </main>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import {
   useCategories,
+  useIncomeCategories,
   useRecurringExpenses,
   useAddRecurringExpense,
   useUpdateRecurringExpense,
@@ -41,15 +42,19 @@ function RecurringExpensesCard({ userId }: { userId: string }) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState(categories[0] ?? "");
+  const [dayOfMonth, setDayOfMonth] = useState("");
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const n = parseFloat(amount.replace(",", "."));
     const cat = category || categories[0];
     if (!n || n <= 0 || !description.trim() || !cat) return;
-    addItem.mutate({ amount: n, description: description.trim(), category: cat });
+    const day = dayOfMonth.trim() ? parseInt(dayOfMonth, 10) : null;
+    if (day != null && (isNaN(day) || day < 1 || day > 31)) return;
+    addItem.mutate({ amount: n, description: description.trim(), category: cat, day_of_month: day });
     setAmount("");
     setDescription("");
+    setDayOfMonth("");
   }
 
   return (
@@ -78,6 +83,14 @@ function RecurringExpensesCard({ userId }: { userId: string }) {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
+        <input
+          value={dayOfMonth}
+          onChange={(e) => setDayOfMonth(e.target.value)}
+          placeholder="Day (optional)"
+          title="Day of month (optional) — leave blank to apply as soon as the month is seen"
+          inputMode="numeric"
+          className="w-32 bg-input border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+        />
         <button
           type="submit"
           className="px-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition"
@@ -107,6 +120,7 @@ function RecurringExpensesCard({ userId }: { userId: string }) {
 }
 
 function RecurringIncomesCard({ userId }: { userId: string }) {
+  const { data: categories = [] } = useIncomeCategories(userId);
   const { data: items = [] } = useRecurringIncomes(userId);
   const addItem = useAddRecurringIncome(userId);
   const updateItem = useUpdateRecurringIncome(userId);
@@ -114,14 +128,20 @@ function RecurringIncomesCard({ userId }: { userId: string }) {
 
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState(categories[0] ?? "");
+  const [dayOfMonth, setDayOfMonth] = useState("");
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const n = parseFloat(amount.replace(",", "."));
-    if (!n || n <= 0 || !description.trim()) return;
-    addItem.mutate({ amount: n, description: description.trim() });
+    const cat = category || categories[0];
+    if (!n || n <= 0 || !description.trim() || !cat) return;
+    const day = dayOfMonth.trim() ? parseInt(dayOfMonth, 10) : null;
+    if (day != null && (isNaN(day) || day < 1 || day > 31)) return;
+    addItem.mutate({ amount: n, description: description.trim(), category: cat, day_of_month: day });
     setAmount("");
     setDescription("");
+    setDayOfMonth("");
   }
 
   return (
@@ -141,6 +161,23 @@ function RecurringIncomesCard({ userId }: { userId: string }) {
           placeholder="e.g. Salary"
           className="flex-1 min-w-[10rem] bg-input border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
         />
+        <select
+          value={category || categories[0] || ""}
+          onChange={(e) => setCategory(e.target.value)}
+          className="bg-input border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+        >
+          {categories.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <input
+          value={dayOfMonth}
+          onChange={(e) => setDayOfMonth(e.target.value)}
+          placeholder="Day (optional)"
+          title="Day of month (optional) — leave blank to apply as soon as the month is seen"
+          inputMode="numeric"
+          className="w-32 bg-input border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+        />
         <button
           type="submit"
           className="px-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition"
@@ -157,6 +194,7 @@ function RecurringIncomesCard({ userId }: { userId: string }) {
             <RecurringIncomeRow
               key={item.id}
               item={item}
+              categories={categories}
               onSave={(updates) => updateItem.mutate({ id: item.id, ...updates })}
               onToggleActive={(active) => updateItem.mutate({ id: item.id, active })}
               onDelete={() => deleteItem.mutate(item.id)}

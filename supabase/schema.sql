@@ -114,3 +114,87 @@ create policy "recurring_expenses_all_own" on public.recurring_expenses
 drop policy if exists "recurring_incomes_all_own" on public.recurring_incomes;
 create policy "recurring_incomes_all_own" on public.recurring_incomes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Optional day-of-month (1-31) for when a recurring item should apply. Null means "apply as soon
+-- as the new month is seen" (the original behavior); set means "wait until that day of the month".
+alter table public.recurring_expenses add column if not exists day_of_month integer check (day_of_month between 1 and 31);
+alter table public.recurring_incomes add column if not exists day_of_month integer check (day_of_month between 1 and 31);
+
+-- Income becomes itemized like expenses (one row per income event) instead of one editable value
+-- per month — recurring incomes just add entries the same way recurring expenses do, which avoids
+-- the "syncing a single value" class of bugs entirely. Income is no longer directly editable in
+-- Month/Year; individual entries are added via the Add tab and edited/deleted like expenses.
+drop table if exists public.incomes cascade;
+
+create table if not exists public.incomes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  amount double precision not null check (amount > 0),
+  description text not null,
+  date timestamptz not null,
+  recurring_income_id uuid references public.recurring_incomes(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.incomes enable row level security;
+
+drop policy if exists "incomes_all_own" on public.incomes;
+create policy "incomes_all_own" on public.incomes
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Income gets its own category list (separate from expense categories — "Salary"/"Freelance"
+-- don't belong in the same list as "Food"/"Transport"), mirroring the categories/expenses pattern.
+create table if not exists public.income_categories (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, name)
+);
+
+alter table public.income_categories enable row level security;
+
+drop policy if exists "income_categories_all_own" on public.income_categories;
+create policy "income_categories_all_own" on public.income_categories
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table public.incomes add column if not exists category text not null default 'Other';
+alter table public.recurring_incomes add column if not exists category text not null default 'Other';
+
+-- Seed default income categories for new signups (extends handle_new_user) and backfill them for
+-- already-signed-up users who don't have any yet.
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.categories (user_id, name)
+    select new.id, c from unnest(array['Food','Transport','Housing','Entertainment','Health','Other']) as c;
+  insert into public.income_categories (user_id, name)
+    select new.id, c from unnest(array['Salary','Freelance','Gifts','Investments','Other']) as c;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+insert into public.income_categories (user_id, name)
+select u.id, c
+from auth.users u
+cross join unnest(array['Salary','Freelance','Gifts','Investments','Other']) as c
+where not exists (select 1 from public.income_categories ic where ic.user_id = u.id);
+
+-- Monthly spending plan per category, powers the "Plan" tab and the Planned/Remaining columns
+-- on the Month view's "Expenses by category" table. One row per (user, year, month, category).
+create table if not exists public.budgets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  year integer not null,
+  month integer not null check (month between 1 and 12),
+  category text not null,
+  amount double precision not null check (amount > 0),
+  created_at timestamptz not null default now(),
+  unique (user_id, year, month, category)
+);
+
+alter table public.budgets enable row level security;
+
+drop policy if exists "budgets_all_own" on public.budgets;
+create policy "budgets_all_own" on public.budgets
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

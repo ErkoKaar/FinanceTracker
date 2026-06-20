@@ -1,48 +1,46 @@
-// "Month"/"Year" tab: fetches expenses/incomes for the current month or year and renders PeriodPanel.
+// "Month"/"Year" tab: filters expenses/incomes for the current month or year and renders PeriodPanel.
 import { useMemo } from "react";
-import { useExpenses, useIncomes, useUpdateIncome } from "@/lib/finance-data";
+import { useExpenses, useIncomes, useBudgets } from "@/lib/finance-data";
 import { PeriodPanel } from "@/components/PeriodPanel";
 
 export function PeriodView({ mode, userId }: { mode: "month" | "year"; userId: string }) {
   const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
   const { data: incomesAll = [], isLoading: incomesLoading } = useIncomes(userId);
-  const updateIncome = useUpdateIncome(userId);
+  const { data: budgetsAll = [], isLoading: budgetsLoading } = useBudgets(userId);
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const expenses = useMemo(
-    () =>
-      expensesAll.filter((e) => {
-        const d = new Date(e.date);
-        if (mode === "year") return d.getFullYear() === year;
-        return d.getFullYear() === year && d.getMonth() + 1 === month;
-      }),
-    [expensesAll, mode, year, month]
-  );
+  const inPeriod = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (mode === "year") return d.getFullYear() === year;
+    return d.getFullYear() === year && d.getMonth() + 1 === month;
+  };
 
-  // Year income is never edited directly — it's just the sum of that year's recorded months.
-  const income = useMemo(() => {
-    if (mode === "year") {
-      return incomesAll.filter((i) => i.year === year).reduce((a, i) => a + i.amount, 0);
-    }
-    return incomesAll.find((i) => i.year === year && i.month === month)?.amount ?? 0;
-  }, [incomesAll, mode, year, month]);
+  const expenses = useMemo(() => expensesAll.filter((e) => inPeriod(e.date)), [expensesAll, mode, year, month]);
+  const incomes = useMemo(() => incomesAll.filter((i) => inPeriod(i.date)), [incomesAll, mode, year, month]);
+  // Budgets are inherently monthly, so they only apply to the month view, not the year view.
+  const budgets = useMemo(
+    () => (mode === "month" ? budgetsAll.filter((b) => b.year === year && b.month === month) : undefined),
+    [budgetsAll, mode, year, month]
+  );
 
   const label =
     mode === "month"
       ? now.toLocaleDateString("en-GB", { month: "long", year: "numeric" })
       : String(year);
 
-  if (expensesLoading || incomesLoading) return <p className="text-sm text-muted-foreground">Loading...</p>;
+  if (expensesLoading || incomesLoading || budgetsLoading) {
+    return <p className="text-sm text-muted-foreground">Loading...</p>;
+  }
 
   return (
     <PeriodPanel
       title={label}
       expenses={expenses}
-      income={income}
-      editableIncome={mode === "month"}
-      onUpdateIncome={mode === "month" ? (n) => updateIncome.mutate({ year, month, amount: n }) : undefined}
+      incomes={incomes}
+      budgets={budgets}
+      showTrend={mode === "year"}
       userId={userId}
     />
   );
