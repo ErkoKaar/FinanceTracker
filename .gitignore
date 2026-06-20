@@ -1,3 +1,4 @@
+# Build output, local secrets, and OS/tooling cruft excluded from git.
 node_modules
 dist
 .DS_Store

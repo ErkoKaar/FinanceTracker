@@ -1,10 +1,11 @@
+// The "/" route: Lumen's entire UI — Supabase-backed login, dashboard tabs, and expense/income views.
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Wallet, Plus, LogOut, Trash2, TrendingUp, TrendingDown, PiggyBank, Pencil, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
-  useIncome,
+  useIncomes,
   useUpdateIncome,
   useCategories,
   useAddCategory,
@@ -305,25 +306,47 @@ function AddView({ userId, email }: { userId: string; email: string }) {
 /* ---------------- PERIOD ---------------- */
 function PeriodView({ mode, userId }: { mode: "month" | "year"; userId: string }) {
   const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
-  const { data: income = 0, isLoading: incomeLoading } = useIncome(userId);
+  const { data: incomesAll = [], isLoading: incomesLoading } = useIncomes(userId);
+  const updateIncome = useUpdateIncome(userId);
   const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
   const expenses = useMemo(
     () =>
       expensesAll.filter((e) => {
         const d = new Date(e.date);
-        if (mode === "year") return d.getFullYear() === now.getFullYear();
-        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        if (mode === "year") return d.getFullYear() === year;
+        return d.getFullYear() === year && d.getMonth() + 1 === month;
       }),
-    [expensesAll, mode]
+    [expensesAll, mode, year, month]
   );
+
+  // Year income is never edited directly — it's just the sum of that year's recorded months.
+  const income = useMemo(() => {
+    if (mode === "year") {
+      return incomesAll.filter((i) => i.year === year).reduce((a, i) => a + i.amount, 0);
+    }
+    return incomesAll.find((i) => i.year === year && i.month === month)?.amount ?? 0;
+  }, [incomesAll, mode, year, month]);
+
   const label =
     mode === "month"
       ? now.toLocaleDateString("et-EE", { month: "long", year: "numeric" })
-      : String(now.getFullYear());
+      : String(year);
 
-  if (expensesLoading || incomeLoading) return <p className="text-sm text-muted-foreground">Laadin...</p>;
+  if (expensesLoading || incomesLoading) return <p className="text-sm text-muted-foreground">Laadin...</p>;
 
-  return <PeriodPanel title={label} expenses={expenses} income={income} editableIncome userId={userId} />;
+  return (
+    <PeriodPanel
+      title={label}
+      expenses={expenses}
+      income={income}
+      editableIncome={mode === "month"}
+      onUpdateIncome={mode === "month" ? (n) => updateIncome.mutate({ year, month, amount: n }) : undefined}
+      userId={userId}
+    />
+  );
 }
 
 function PeriodPanel({
@@ -331,15 +354,16 @@ function PeriodPanel({
   expenses,
   income,
   editableIncome = false,
+  onUpdateIncome,
   userId,
 }: {
   title: string;
   expenses: Expense[];
   income: number;
   editableIncome?: boolean;
+  onUpdateIncome?: (amount: number) => void;
   userId: string;
 }) {
-  const updateIncome = useUpdateIncome(userId);
   const deleteExpense = useDeleteExpense(userId);
 
   const total = expenses.reduce((a, e) => a + e.amount, 0);
@@ -366,7 +390,7 @@ function PeriodPanel({
           label="Sissetulek"
           value={income}
           editable={editableIncome}
-          onSave={(n) => updateIncome.mutate(n)}
+          onSave={onUpdateIncome}
           tone="up"
         />
         <StatCard icon={<TrendingDown className="size-4" />} label="Kogukulutused" value={total} tone="down" />
@@ -533,8 +557,9 @@ function StatCard({
 
 /* ---------------- HISTORY ---------------- */
 function HistoryView({ userId }: { userId: string }) {
-  const { data: expensesAll = [], isLoading } = useExpenses(userId);
-  const { data: income = 0 } = useIncome(userId);
+  const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
+  const { data: incomesAll = [], isLoading: incomesLoading } = useIncomes(userId);
+  const updateIncome = useUpdateIncome(userId);
   const [granularity, setGranularity] = useState<"month" | "year">("month");
   const [open, setOpen] = useState<string | null | undefined>(undefined);
 
@@ -555,6 +580,16 @@ function HistoryView({ userId }: { userId: string }) {
 
   const effectiveOpen = open === undefined ? groups[0]?.[0] ?? null : open;
 
+  // Year groups show the read-only sum of that year's months; month groups show (and allow
+  // fixing) that specific month's recorded income.
+  function incomeForKey(key: string): number {
+    if (granularity === "year") {
+      return incomesAll.filter((i) => i.year === Number(key)).reduce((a, i) => a + i.amount, 0);
+    }
+    const [y, m] = key.split("-").map(Number);
+    return incomesAll.find((i) => i.year === y && i.month === m)?.amount ?? 0;
+  }
+
   function pretty(key: string) {
     if (granularity === "year") return key;
     const [y, m] = key.split("-");
@@ -564,7 +599,7 @@ function HistoryView({ userId }: { userId: string }) {
     });
   }
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Laadin...</p>;
+  if (expensesLoading || incomesLoading) return <p className="text-sm text-muted-foreground">Laadin...</p>;
 
   return (
     <div className="space-y-6">
@@ -609,7 +644,21 @@ function HistoryView({ userId }: { userId: string }) {
               </button>
               {isOpen && (
                 <div className="border-t border-border p-5">
-                  <PeriodPanel title={pretty(key)} expenses={items} income={income} userId={userId} />
+                  <PeriodPanel
+                    title={pretty(key)}
+                    expenses={items}
+                    income={incomeForKey(key)}
+                    editableIncome={granularity === "month"}
+                    onUpdateIncome={
+                      granularity === "month"
+                        ? (n) => {
+                            const [y, m] = key.split("-").map(Number);
+                            updateIncome.mutate({ year: y, month: m, amount: n });
+                          }
+                        : undefined
+                    }
+                    userId={userId}
+                  />
                 </div>
               )}
             </div>

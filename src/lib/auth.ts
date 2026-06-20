@@ -1,3 +1,4 @@
+// useAuth hook: tracks the current Supabase session and exposes signIn/signUp/signOut.
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";

@@ -1,3 +1,4 @@
+// TypeScript config for the Vite + React app; defines the "@/*" -> src path alias used by imports.
 {
   "compilerOptions": {
     "target": "ES2020",

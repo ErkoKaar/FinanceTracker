@@ -1,3 +1,4 @@
+// Supabase client instance, configured from the VITE_SUPABASE_* env vars (see .env.example).
 import { createClient } from "@supabase/supabase-js";
 
 export const supabase = createClient(

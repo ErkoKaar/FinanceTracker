@@ -1,3 +1,4 @@
+// Ambient type declarations for Vite's import.meta.env, typing the VITE_SUPABASE_* variables.
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {

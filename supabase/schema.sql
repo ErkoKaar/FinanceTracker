@@ -1,9 +1,19 @@
+-- Database schema for the Lumen finance tracker: incomes/categories/expenses tables, RLS policies
+-- scoping every row to auth.uid(), and a trigger that seeds default categories for each new user.
 -- Run this in the Supabase dashboard SQL editor (Project > SQL Editor).
 
-create table if not exists public.profiles (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  income double precision not null default 0,
-  created_at timestamptz not null default now()
+-- Replaces the old single global "profiles.income" value with per-month income rows, so a year's
+-- income is just the sum of that year's months instead of a separately editable number.
+drop table if exists public.profiles cascade;
+
+create table if not exists public.incomes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  year integer not null,
+  month integer not null check (month between 1 and 12),
+  amount double precision not null default 0 check (amount >= 0),
+  created_at timestamptz not null default now(),
+  unique (user_id, year, month)
 );
 
 create table if not exists public.categories (
@@ -24,26 +34,26 @@ create table if not exists public.expenses (
   created_at timestamptz not null default now()
 );
 
-alter table public.profiles enable row level security;
+alter table public.incomes enable row level security;
 alter table public.categories enable row level security;
 alter table public.expenses enable row level security;
 
-create policy "profiles_select_own" on public.profiles
-  for select using (auth.uid() = user_id);
-create policy "profiles_update_own" on public.profiles
-  for update using (auth.uid() = user_id);
+drop policy if exists "incomes_all_own" on public.incomes;
+create policy "incomes_all_own" on public.incomes
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "categories_all_own" on public.categories;
 create policy "categories_all_own" on public.categories
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "expenses_all_own" on public.expenses;
 create policy "expenses_all_own" on public.expenses
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- Seed a profile row + default categories whenever a new auth user is created.
+-- Seed default categories whenever a new auth user is created.
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (user_id, income) values (new.id, 0);
   insert into public.categories (user_id, name)
     select new.id, c from unnest(array['Toit','Transport','Eluase','Meelelahutus','Tervis','Muu']) as c;
   return new;

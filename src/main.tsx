@@ -1,3 +1,4 @@
+// App entry point: builds the TanStack Router instance and mounts it into the DOM.
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";

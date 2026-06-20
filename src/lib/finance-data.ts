@@ -1,3 +1,5 @@
+// TanStack Query hooks for reading/writing income, categories, and expenses via Supabase.
+// RLS policies in supabase/schema.sql scope every row to the current user; queries don't filter manually.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./supabase";
 
@@ -9,13 +11,21 @@ export type Expense = {
   date: string; // ISO
 };
 
-export function useIncome(userId: string | undefined) {
+export type Income = {
+  year: number;
+  month: number; // 1-12
+  amount: number;
+};
+
+// Fetches every recorded month's income for the user; year totals are summed client-side
+// (same pattern as useExpenses below) since a year's income is just the sum of its months.
+export function useIncomes(userId: string | undefined) {
   return useQuery({
-    queryKey: ["income", userId],
+    queryKey: ["incomes", userId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("income").single();
+      const { data, error } = await supabase.from("incomes").select("year, month, amount");
       if (error) throw error;
-      return data.income as number;
+      return data as Income[];
     },
     enabled: !!userId,
   });
@@ -24,11 +34,13 @@ export function useIncome(userId: string | undefined) {
 export function useUpdateIncome(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (income: number) => {
-      const { error } = await supabase.from("profiles").update({ income }).eq("user_id", userId);
+    mutationFn: async (income: Income) => {
+      const { error } = await supabase
+        .from("incomes")
+        .upsert({ user_id: userId, ...income }, { onConflict: "user_id,year,month" });
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["income", userId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incomes", userId] }),
   });
 }
 

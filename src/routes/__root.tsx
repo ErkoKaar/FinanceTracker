@@ -1,3 +1,4 @@
+// Root route: wraps every page in QueryClientProvider and renders the 404/error fallbacks.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, Link, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 
