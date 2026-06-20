@@ -38,22 +38,22 @@ export function PeriodPanel({
     <div className="space-y-8">
       <div className="flex items-end justify-between">
         <h2 className="text-2xl font-semibold tracking-tight capitalize">{title}</h2>
-        <span className="text-xs text-muted-foreground">{expenses.length} kannet</span>
+        <span className="text-xs text-muted-foreground">{expenses.length} entries</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           icon={<TrendingUp className="size-4" />}
-          label="Sissetulek"
+          label="Income"
           value={income}
           editable={editableIncome}
           onSave={onUpdateIncome}
           tone="up"
         />
-        <StatCard icon={<TrendingDown className="size-4" />} label="Kogukulutused" value={total} tone="down" />
+        <StatCard icon={<TrendingDown className="size-4" />} label="Total expenses" value={total} tone="down" />
         <StatCard
           icon={<PiggyBank className="size-4" />}
-          label="Jääk"
+          label="Balance"
           value={balance}
           tone={balance >= 0 ? "up" : "down"}
         />
@@ -61,15 +61,15 @@ export function PeriodPanel({
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 bg-card border border-border rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-border text-sm font-medium">Kulutused kategooriate kaupa</div>
+          <div className="px-5 py-4 border-b border-border text-sm font-medium">Expenses by category</div>
           {byCat.length === 0 ? (
-            <div className="p-10 text-center text-sm text-muted-foreground">Veel pole kulutusi.</div>
+            <div className="p-10 text-center text-sm text-muted-foreground">No expenses yet.</div>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted-foreground">
-                  <th className="px-5 py-2 font-normal">Kategooria</th>
-                  <th className="px-5 py-2 font-normal text-right">Summa</th>
+                  <th className="px-5 py-2 font-normal">Category</th>
+                  <th className="px-5 py-2 font-normal text-right">Amount</th>
                   <th className="px-5 py-2 font-normal text-right">%</th>
                 </tr>
               </thead>
@@ -95,10 +95,10 @@ export function PeriodPanel({
         </div>
 
         <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-5">
-          <div className="text-sm font-medium mb-2">Jaotus</div>
+          <div className="text-sm font-medium mb-2">Breakdown</div>
           {byCat.length === 0 ? (
             <div className="h-64 flex items-center justify-center text-sm text-muted-foreground">
-              Andmed puuduvad
+              No data
             </div>
           ) : (
             <div className="h-64">
@@ -127,14 +127,14 @@ export function PeriodPanel({
 
       {expenses.length > 0 && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-border text-sm font-medium">Kanded</div>
+          <div className="px-5 py-4 border-b border-border text-sm font-medium">Entries</div>
           <ul>
             {expenses.slice(0, 20).map((e) => (
               <li key={e.id} className="px-5 py-3 border-t border-border first:border-t-0 flex items-center justify-between text-sm">
                 <div>
                   <div>{e.description}</div>
                   <div className="text-xs text-muted-foreground">
-                    {e.category} · {new Date(e.date).toLocaleDateString("et-EE")}
+                    {e.category} · {new Date(e.date).toLocaleDateString("en-GB")}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

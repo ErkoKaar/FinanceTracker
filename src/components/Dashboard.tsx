@@ -1,11 +1,11 @@
-// Logged-in app shell: header/tabs/sign-out, switches between the Lisa/Kuu/Aasta/Ajalugu tabs.
+// Logged-in app shell: header/tabs/sign-out, switches between the Add/Month/Year/History tabs.
 import { useState } from "react";
 import { Wallet, LogOut } from "lucide-react";
 import { AddView } from "@/components/AddView";
 import { PeriodView } from "@/components/PeriodView";
 import { HistoryView } from "@/components/HistoryView";
 
-type Tab = "lisa" | "kuu" | "aasta" | "ajalugu";
+type Tab = "add" | "month" | "year" | "history";
 
 export function Dashboard({
   userId,
@@ -16,7 +16,7 @@ export function Dashboard({
   email: string;
   onSignOut: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>("lisa");
+  const [tab, setTab] = useState<Tab>("add");
 
   return (
     <div className="min-h-screen">
@@ -26,14 +26,14 @@ export function Dashboard({
             <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
               <Wallet className="size-4 text-primary" />
             </div>
-            <span className="font-semibold tracking-tight">Lumen</span>
+            <span className="font-semibold tracking-tight">FinanceTracker</span>
           </div>
           <nav className="flex items-center gap-1 text-sm">
             {([
-              ["lisa", "Lisa"],
-              ["kuu", "Kuu"],
-              ["aasta", "Aasta"],
-              ["ajalugu", "Ajalugu"],
+              ["add", "Add"],
+              ["month", "Month"],
+              ["year", "Year"],
+              ["history", "History"],
             ] as [Tab, string][]).map(([k, label]) => (
               <button
                 key={k}
@@ -49,7 +49,7 @@ export function Dashboard({
           <button
             onClick={onSignOut}
             className="text-muted-foreground hover:text-foreground transition p-2"
-            aria-label="Logi välja"
+            aria-label="Log out"
           >
             <LogOut className="size-4" />
           </button>
@@ -57,10 +57,10 @@ export function Dashboard({
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-10">
-        {tab === "lisa" && <AddView userId={userId} email={email} />}
-        {tab === "kuu" && <PeriodView mode="month" userId={userId} />}
-        {tab === "aasta" && <PeriodView mode="year" userId={userId} />}
-        {tab === "ajalugu" && <HistoryView userId={userId} />}
+        {tab === "add" && <AddView userId={userId} email={email} />}
+        {tab === "month" && <PeriodView mode="month" userId={userId} />}
+        {tab === "year" && <PeriodView mode="year" userId={userId} />}
+        {tab === "history" && <HistoryView userId={userId} />}
       </main>
     </div>
   );

@@ -1,4 +1,4 @@
-// "Lisa" tab: the add-expense form, including the category picker and inline "new category" input.
+// "Add" tab: the add-expense form, including the category picker and inline "new category" input.
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useCategories, useAddCategory, useAddExpense } from "@/lib/finance-data";
@@ -34,34 +34,34 @@ export function AddView({ userId, email }: { userId: string; email: string }) {
 
   return (
     <div className="max-w-xl mx-auto">
-      <p className="text-sm text-muted-foreground">Tere tulemast tagasi,</p>
+      <p className="text-sm text-muted-foreground">Welcome back,</p>
       <h1 className="text-3xl font-semibold tracking-tight mt-1">{email.split("@")[0]} 👋</h1>
-      <p className="text-muted-foreground mt-2 text-sm">Lisa uus kulutus allpool.</p>
+      <p className="text-muted-foreground mt-2 text-sm">Add a new expense below.</p>
 
       <form onSubmit={submit} className="mt-8 bg-card border border-border rounded-2xl p-6 space-y-5">
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Summa (€)</label>
+          <label className="text-xs text-muted-foreground">Amount (€)</label>
           <input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder="0,00"
+            placeholder="0.00"
             inputMode="decimal"
             className="w-full bg-input border border-border rounded-lg px-3 py-3 text-2xl font-medium focus:outline-none focus:ring-2 focus:ring-ring/50"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Mida ostsid?</label>
+          <label className="text-xs text-muted-foreground">What did you buy?</label>
           <input
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
-            placeholder="nt. Kohv ja sai"
+            placeholder="e.g. Coffee and a pastry"
             className="w-full bg-input border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Kategooria</label>
+          <label className="text-xs text-muted-foreground">Category</label>
           <div className="flex gap-2">
             <select
               value={cat}
@@ -76,7 +76,7 @@ export function AddView({ userId, email }: { userId: string; email: string }) {
               type="button"
               onClick={() => setShowNew((v) => !v)}
               className="px-3 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition"
-              aria-label="Lisa kategooria"
+              aria-label="Add category"
             >
               <Plus className="size-4" />
             </button>
@@ -86,7 +86,7 @@ export function AddView({ userId, email }: { userId: string; email: string }) {
               <input
                 value={newCat}
                 onChange={(e) => setNewCat(e.target.value)}
-                placeholder="Uue kategooria nimi"
+                placeholder="New category name"
                 className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
               />
               <button
@@ -101,7 +101,7 @@ export function AddView({ userId, email }: { userId: string; email: string }) {
                 }}
                 className="px-3 py-2 rounded-lg bg-secondary text-sm hover:bg-accent transition"
               >
-                Lisa
+                Add
               </button>
             </div>
           )}
@@ -111,7 +111,7 @@ export function AddView({ userId, email }: { userId: string; email: string }) {
           type="submit"
           className="w-full bg-primary text-primary-foreground rounded-lg py-3 text-sm font-medium hover:opacity-90 transition"
         >
-          Salvesta kulutus
+          Save expense
         </button>
       </form>
     </div>

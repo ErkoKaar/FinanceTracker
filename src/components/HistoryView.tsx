@@ -1,4 +1,4 @@
-// "Ajalugu" tab: collapsible month/year accordion of past expenses, each group rendering PeriodPanel.
+// "History" tab: collapsible month/year accordion of past expenses, each group rendering PeriodPanel.
 import { useMemo, useState } from "react";
 import { useExpenses, useIncomes, useUpdateIncome, type Expense } from "@/lib/finance-data";
 import { PeriodPanel } from "@/components/PeriodPanel";
@@ -40,18 +40,18 @@ export function HistoryView({ userId }: { userId: string }) {
   function pretty(key: string) {
     if (granularity === "year") return key;
     const [y, m] = key.split("-");
-    return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("et-EE", {
+    return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("en-GB", {
       month: "long",
       year: "numeric",
     });
   }
 
-  if (expensesLoading || incomesLoading) return <p className="text-sm text-muted-foreground">Laadin...</p>;
+  if (expensesLoading || incomesLoading) return <p className="text-sm text-muted-foreground">Loading...</p>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold tracking-tight">Ajalugu</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">History</h2>
         <div className="flex bg-card border border-border rounded-lg p-1 text-xs">
           {(["month", "year"] as const).map((g) => (
             <button
@@ -61,7 +61,7 @@ export function HistoryView({ userId }: { userId: string }) {
                 granularity === g ? "bg-secondary text-foreground" : "text-muted-foreground"
               }`}
             >
-              {g === "month" ? "Kuude kaupa" : "Aastate kaupa"}
+              {g === "month" ? "By month" : "By year"}
             </button>
           ))}
         </div>
@@ -69,7 +69,7 @@ export function HistoryView({ userId }: { userId: string }) {
 
       {groups.length === 0 && (
         <div className="bg-card border border-border rounded-2xl p-10 text-center text-sm text-muted-foreground">
-          Ajalugu on veel tühi.
+          History is empty so far.
         </div>
       )}
 
@@ -85,7 +85,7 @@ export function HistoryView({ userId }: { userId: string }) {
               >
                 <span className="capitalize">{pretty(key)}</span>
                 <span className="flex items-center gap-4 text-muted-foreground">
-                  <span>{items.length} kannet</span>
+                  <span>{items.length} entries</span>
                   <span className="tabular-nums text-foreground">€{total.toFixed(2)}</span>
                 </span>
               </button>

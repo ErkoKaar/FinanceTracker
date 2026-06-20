@@ -28,7 +28,7 @@ export function Login({
     } else {
       const { data, error } = await signUp(email, password);
       if (error) setError(error.message);
-      else if (!data.session) setInfo("Kontrolli emaili ja kinnita konto, enne kui sisse logid.");
+      else if (!data.session) setInfo("Check your email to confirm your account before logging in.");
     }
     setSubmitting(false);
   }
@@ -40,8 +40,8 @@ export function Login({
           <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
             <Wallet className="size-7 text-primary" strokeWidth={1.8} />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Lumen</h1>
-          <p className="text-xs text-muted-foreground mt-1">Personaalne rahahaldur</p>
+          <h1 className="text-2xl font-semibold tracking-tight">FinanceTracker</h1>
+          <p className="text-xs text-muted-foreground mt-1">Personal finance tracker</p>
         </div>
 
         <form onSubmit={submit} className="bg-card border border-border rounded-2xl p-6 space-y-4">
@@ -52,12 +52,12 @@ export function Login({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="nt. mari@näide.ee"
+              placeholder="e.g. mari@example.com"
               className="w-full bg-input border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Parool</label>
+            <label className="text-xs text-muted-foreground">Password</label>
             <input
               type="password"
               value={password}
@@ -73,7 +73,7 @@ export function Login({
             disabled={submitting}
             className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-medium hover:opacity-90 transition disabled:opacity-60"
           >
-            {mode === "login" ? "Logi sisse" : "Registreeri"}
+            {mode === "login" ? "Log in" : "Sign up"}
           </button>
           <button
             type="button"
@@ -84,7 +84,7 @@ export function Login({
             }}
             className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition"
           >
-            {mode === "login" ? "Pole veel kontot? Registreeri" : "Juba kasutaja? Logi sisse"}
+            {mode === "login" ? "Don't have an account? Sign up" : "Already have an account? Log in"}
           </button>
         </form>
       </div>

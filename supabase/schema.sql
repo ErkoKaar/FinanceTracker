@@ -1,4 +1,4 @@
--- Database schema for the Lumen finance tracker: incomes/categories/expenses tables, RLS policies
+-- Database schema for the FinanceTracker app: incomes/categories/expenses tables, RLS policies
 -- scoping every row to auth.uid(), and a trigger that seeds default categories for each new user.
 -- Run this in the Supabase dashboard SQL editor (Project > SQL Editor).
 
@@ -55,7 +55,7 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   insert into public.categories (user_id, name)
-    select new.id, c from unnest(array['Toit','Transport','Eluase','Meelelahutus','Tervis','Muu']) as c;
+    select new.id, c from unnest(array['Food','Transport','Housing','Entertainment','Health','Other']) as c;
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
@@ -64,3 +64,17 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- One-off rename of the old Estonian default category names to English for already-signed-up
+-- users (the app's UI/data is now English-only). Safe to re-run: matches nothing once renamed.
+update public.categories set name = 'Food' where name = 'Toit';
+update public.categories set name = 'Housing' where name = 'Eluase';
+update public.categories set name = 'Entertainment' where name = 'Meelelahutus';
+update public.categories set name = 'Health' where name = 'Tervis';
+update public.categories set name = 'Other' where name = 'Muu';
+
+update public.expenses set category = 'Food' where category = 'Toit';
+update public.expenses set category = 'Housing' where category = 'Eluase';
+update public.expenses set category = 'Entertainment' where category = 'Meelelahutus';
+update public.expenses set category = 'Health' where category = 'Tervis';
+update public.expenses set category = 'Other' where category = 'Muu';

@@ -1,4 +1,4 @@
-// "Kuu"/"Aasta" tab: fetches expenses/incomes for the current month or year and renders PeriodPanel.
+// "Month"/"Year" tab: fetches expenses/incomes for the current month or year and renders PeriodPanel.
 import { useMemo } from "react";
 import { useExpenses, useIncomes, useUpdateIncome } from "@/lib/finance-data";
 import { PeriodPanel } from "@/components/PeriodPanel";
@@ -31,10 +31,10 @@ export function PeriodView({ mode, userId }: { mode: "month" | "year"; userId: s
 
   const label =
     mode === "month"
-      ? now.toLocaleDateString("et-EE", { month: "long", year: "numeric" })
+      ? now.toLocaleDateString("en-GB", { month: "long", year: "numeric" })
       : String(year);
 
-  if (expensesLoading || incomesLoading) return <p className="text-sm text-muted-foreground">Laadin...</p>;
+  if (expensesLoading || incomesLoading) return <p className="text-sm text-muted-foreground">Loading...</p>;
 
   return (
     <PeriodPanel
