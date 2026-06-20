@@ -1,22 +1,69 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Wallet, Plus, LogOut, Trash2, TrendingUp, TrendingDown, PiggyBank, Pencil, Check } from "lucide-react";
-import { store, useFinance, type Expense } from "@/lib/finance-store";
+import { useAuth } from "@/lib/auth";
+import {
+  useIncome,
+  useUpdateIncome,
+  useCategories,
+  useAddCategory,
+  useExpenses,
+  useAddExpense,
+  useDeleteExpense,
+  type Expense,
+} from "@/lib/finance-data";
 
 export const Route = createFileRoute("/")({
   component: App,
 });
 
+function FullScreenMessage({ text }: { text: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">{text}</div>
+  );
+}
+
 function App() {
-  const s = useFinance();
-  return s.user ? <Dashboard /> : <Login />;
+  const { user, loading, signIn, signUp, signOut } = useAuth();
+  if (loading) return <FullScreenMessage text="Laadin..." />;
+  return user ? (
+    <Dashboard userId={user.id} email={user.email ?? ""} onSignOut={signOut} />
+  ) : (
+    <Login signIn={signIn} signUp={signUp} />
+  );
 }
 
 /* ---------------- LOGIN ---------------- */
-function Login() {
-  const [name, setName] = useState("");
+function Login({
+  signIn,
+  signUp,
+}: {
+  signIn: ReturnType<typeof useAuth>["signIn"];
+  signUp: ReturnType<typeof useAuth>["signUp"];
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    setSubmitting(true);
+    if (mode === "login") {
+      const { error } = await signIn(email, password);
+      if (error) setError(error.message);
+    } else {
+      const { data, error } = await signUp(email, password);
+      if (error) setError(error.message);
+      else if (!data.session) setInfo("Kontrolli emaili ja kinnita konto, enne kui sisse logid.");
+    }
+    setSubmitting(false);
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-[radial-gradient(ellipse_at_top,_oklch(0.22_0.02_165_/_0.4),_transparent_60%)]">
@@ -29,20 +76,15 @@ function Login() {
           <p className="text-xs text-muted-foreground mt-1">Personaalne rahahaldur</p>
         </div>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (name.trim()) store.login(name.trim());
-          }}
-          className="bg-card border border-border rounded-2xl p-6 space-y-4"
-        >
+        <form onSubmit={submit} className="bg-card border border-border rounded-2xl p-6 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Kasutajanimi</label>
+            <label className="text-xs text-muted-foreground">Email</label>
             <input
               autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="nt. Mari"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="nt. mari@näide.ee"
               className="w-full bg-input border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
             />
           </div>
@@ -50,19 +92,28 @@ function Login() {
             <label className="text-xs text-muted-foreground">Parool</label>
             <input
               type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full bg-input border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
             />
           </div>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          {info && <p className="text-xs text-primary">{info}</p>}
           <button
             type="submit"
-            className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-medium hover:opacity-90 transition"
+            disabled={submitting}
+            className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-medium hover:opacity-90 transition disabled:opacity-60"
           >
             {mode === "login" ? "Logi sisse" : "Registreeri"}
           </button>
           <button
             type="button"
-            onClick={() => setMode(mode === "login" ? "register" : "login")}
+            onClick={() => {
+              setMode(mode === "login" ? "register" : "login");
+              setError(null);
+              setInfo(null);
+            }}
             className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition"
           >
             {mode === "login" ? "Pole veel kontot? Registreeri" : "Juba kasutaja? Logi sisse"}
@@ -76,8 +127,15 @@ function Login() {
 /* ---------------- DASHBOARD ---------------- */
 type Tab = "lisa" | "kuu" | "aasta" | "ajalugu";
 
-function Dashboard() {
-  const s = useFinance();
+function Dashboard({
+  userId,
+  email,
+  onSignOut,
+}: {
+  userId: string;
+  email: string;
+  onSignOut: () => void;
+}) {
   const [tab, setTab] = useState<Tab>("lisa");
 
   return (
@@ -109,7 +167,7 @@ function Dashboard() {
             ))}
           </nav>
           <button
-            onClick={() => store.logout()}
+            onClick={onSignOut}
             className="text-muted-foreground hover:text-foreground transition p-2"
             aria-label="Logi välja"
           >
@@ -119,29 +177,36 @@ function Dashboard() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-10">
-        {tab === "lisa" && <AddView name={s.user!} />}
-        {tab === "kuu" && <PeriodView mode="month" />}
-        {tab === "aasta" && <PeriodView mode="year" />}
-        {tab === "ajalugu" && <HistoryView />}
+        {tab === "lisa" && <AddView userId={userId} email={email} />}
+        {tab === "kuu" && <PeriodView mode="month" userId={userId} />}
+        {tab === "aasta" && <PeriodView mode="year" userId={userId} />}
+        {tab === "ajalugu" && <HistoryView userId={userId} />}
       </main>
     </div>
   );
 }
 
 /* ---------------- ADD ---------------- */
-function AddView({ name }: { name: string }) {
-  const s = useFinance();
+function AddView({ userId, email }: { userId: string; email: string }) {
+  const { data: categories = [] } = useCategories(userId);
+  const addExpense = useAddExpense(userId);
+  const addCategory = useAddCategory(userId);
+
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
-  const [cat, setCat] = useState(s.categories[0] ?? "");
+  const [cat, setCat] = useState("");
   const [newCat, setNewCat] = useState("");
   const [showNew, setShowNew] = useState(false);
+
+  useEffect(() => {
+    if (!cat && categories.length > 0) setCat(categories[0]);
+  }, [categories, cat]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const n = parseFloat(amount.replace(",", "."));
     if (!n || n <= 0 || !cat) return;
-    store.addExpense({
+    addExpense.mutate({
       amount: n,
       description: desc.trim() || cat,
       category: cat,
@@ -154,7 +219,7 @@ function AddView({ name }: { name: string }) {
   return (
     <div className="max-w-xl mx-auto">
       <p className="text-sm text-muted-foreground">Tere tulemast tagasi,</p>
-      <h1 className="text-3xl font-semibold tracking-tight mt-1">{name} 👋</h1>
+      <h1 className="text-3xl font-semibold tracking-tight mt-1">{email.split("@")[0]} 👋</h1>
       <p className="text-muted-foreground mt-2 text-sm">Lisa uus kulutus allpool.</p>
 
       <form onSubmit={submit} className="mt-8 bg-card border border-border rounded-2xl p-6 space-y-5">
@@ -187,7 +252,7 @@ function AddView({ name }: { name: string }) {
               onChange={(e) => setCat(e.target.value)}
               className="flex-1 bg-input border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
             >
-              {s.categories.map((c) => (
+              {categories.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
@@ -212,7 +277,7 @@ function AddView({ name }: { name: string }) {
                 type="button"
                 onClick={() => {
                   if (newCat.trim()) {
-                    store.addCategory(newCat);
+                    addCategory.mutate(newCat.trim());
                     setCat(newCat.trim());
                     setNewCat("");
                     setShowNew(false);
@@ -238,24 +303,27 @@ function AddView({ name }: { name: string }) {
 }
 
 /* ---------------- PERIOD ---------------- */
-function PeriodView({ mode }: { mode: "month" | "year" }) {
-  const s = useFinance();
+function PeriodView({ mode, userId }: { mode: "month" | "year"; userId: string }) {
+  const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
+  const { data: income = 0, isLoading: incomeLoading } = useIncome(userId);
   const now = new Date();
   const expenses = useMemo(
     () =>
-      s.expenses.filter((e) => {
+      expensesAll.filter((e) => {
         const d = new Date(e.date);
         if (mode === "year") return d.getFullYear() === now.getFullYear();
         return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
       }),
-    [s.expenses, mode]
+    [expensesAll, mode]
   );
   const label =
     mode === "month"
       ? now.toLocaleDateString("et-EE", { month: "long", year: "numeric" })
       : String(now.getFullYear());
 
-  return <PeriodPanel title={label} expenses={expenses} income={s.income} editableIncome />;
+  if (expensesLoading || incomeLoading) return <p className="text-sm text-muted-foreground">Laadin...</p>;
+
+  return <PeriodPanel title={label} expenses={expenses} income={income} editableIncome userId={userId} />;
 }
 
 function PeriodPanel({
@@ -263,12 +331,17 @@ function PeriodPanel({
   expenses,
   income,
   editableIncome = false,
+  userId,
 }: {
   title: string;
   expenses: Expense[];
   income: number;
   editableIncome?: boolean;
+  userId: string;
 }) {
+  const updateIncome = useUpdateIncome(userId);
+  const deleteExpense = useDeleteExpense(userId);
+
   const total = expenses.reduce((a, e) => a + e.amount, 0);
   const balance = income - total;
 
@@ -293,6 +366,7 @@ function PeriodPanel({
           label="Sissetulek"
           value={income}
           editable={editableIncome}
+          onSave={(n) => updateIncome.mutate(n)}
           tone="up"
         />
         <StatCard icon={<TrendingDown className="size-4" />} label="Kogukulutused" value={total} tone="down" />
@@ -385,7 +459,7 @@ function PeriodPanel({
                 <div className="flex items-center gap-3">
                   <span className="tabular-nums">€{e.amount.toFixed(2)}</span>
                   <button
-                    onClick={() => store.deleteExpense(e.id)}
+                    onClick={() => deleteExpense.mutate(e.id)}
                     className="text-muted-foreground hover:text-destructive transition"
                   >
                     <Trash2 className="size-4" />
@@ -406,12 +480,14 @@ function StatCard({
   value,
   tone,
   editable = false,
+  onSave,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   tone: "up" | "down";
   editable?: boolean;
+  onSave?: (value: number) => void;
 }) {
   const [edit, setEdit] = useState(false);
   const [v, setV] = useState(String(value));
@@ -427,7 +503,7 @@ function StatCard({
             onClick={() => {
               if (edit) {
                 const n = parseFloat(v.replace(",", "."));
-                if (!isNaN(n) && n >= 0) store.setIncome(n);
+                if (!isNaN(n) && n >= 0) onSave?.(n);
               } else {
                 setV(String(value));
               }
@@ -456,13 +532,15 @@ function StatCard({
 }
 
 /* ---------------- HISTORY ---------------- */
-function HistoryView() {
-  const s = useFinance();
+function HistoryView({ userId }: { userId: string }) {
+  const { data: expensesAll = [], isLoading } = useExpenses(userId);
+  const { data: income = 0 } = useIncome(userId);
   const [granularity, setGranularity] = useState<"month" | "year">("month");
+  const [open, setOpen] = useState<string | null | undefined>(undefined);
 
   const groups = useMemo(() => {
     const m = new Map<string, Expense[]>();
-    s.expenses.forEach((e) => {
+    expensesAll.forEach((e) => {
       const d = new Date(e.date);
       const key =
         granularity === "month"
@@ -473,9 +551,9 @@ function HistoryView() {
       m.set(key, arr);
     });
     return Array.from(m.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
-  }, [s.expenses, granularity]);
+  }, [expensesAll, granularity]);
 
-  const [open, setOpen] = useState<string | null>(groups[0]?.[0] ?? null);
+  const effectiveOpen = open === undefined ? groups[0]?.[0] ?? null : open;
 
   function pretty(key: string) {
     if (granularity === "year") return key;
@@ -485,6 +563,8 @@ function HistoryView() {
       year: "numeric",
     });
   }
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Laadin...</p>;
 
   return (
     <div className="space-y-6">
@@ -514,7 +594,7 @@ function HistoryView() {
       <div className="space-y-3">
         {groups.map(([key, items]) => {
           const total = items.reduce((a, e) => a + e.amount, 0);
-          const isOpen = open === key;
+          const isOpen = effectiveOpen === key;
           return (
             <div key={key} className="bg-card border border-border rounded-2xl overflow-hidden">
               <button
@@ -529,7 +609,7 @@ function HistoryView() {
               </button>
               {isOpen && (
                 <div className="border-t border-border p-5">
-                  <PeriodPanel title={pretty(key)} expenses={items} income={s.income} />
+                  <PeriodPanel title={pretty(key)} expenses={items} income={income} userId={userId} />
                 </div>
               )}
             </div>
