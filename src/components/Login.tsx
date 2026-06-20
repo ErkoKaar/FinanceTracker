@@ -1,7 +1,7 @@
 // Logged-out screen: email/password login + registration form.
 import { useState } from "react";
-import { Wallet } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import logo from "@/assets/finance-tracker-logo.png";
 
 export function Login({
   signIn,
@@ -37,9 +37,7 @@ export function Login({
     <div className="min-h-screen flex items-center justify-center px-4 bg-[radial-gradient(ellipse_at_top,_oklch(0.22_0.02_165_/_0.4),_transparent_60%)]">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-10">
-          <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-            <Wallet className="size-7 text-primary" strokeWidth={1.8} />
-          </div>
+          <img src={logo} alt="FinanceTracker logo" className="size-48 mb-4" />
           <h1 className="text-2xl font-semibold tracking-tight">FinanceTracker</h1>
           <p className="text-xs text-muted-foreground mt-1">Personal finance tracker</p>
         </div>

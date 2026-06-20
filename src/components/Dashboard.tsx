@@ -1,6 +1,6 @@
 // Logged-in app shell: header/tabs/sign-out, switches between the Add/Month/Year/History tabs.
 import { useState } from "react";
-import { Wallet, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { AddView } from "@/components/AddView";
 import { PeriodView } from "@/components/PeriodView";
 import { HistoryView } from "@/components/HistoryView";
@@ -23,9 +23,6 @@ export function Dashboard({
       <header className="border-b border-border sticky top-0 bg-background/80 backdrop-blur z-10">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Wallet className="size-4 text-primary" />
-            </div>
             <span className="font-semibold tracking-tight">FinanceTracker</span>
           </div>
           <nav className="flex items-center gap-1 text-sm">
