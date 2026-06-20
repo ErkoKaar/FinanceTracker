@@ -78,3 +78,39 @@ update public.expenses set category = 'Housing' where category = 'Eluase';
 update public.expenses set category = 'Entertainment' where category = 'Meelelahutus';
 update public.expenses set category = 'Health' where category = 'Tervis';
 update public.expenses set category = 'Other' where category = 'Muu';
+
+-- Recurring monthly expense/income templates. Auto-applied client-side each month (see
+-- useApplyRecurring in src/lib/finance-data.ts) into real `expenses`/`incomes` rows.
+create table if not exists public.recurring_expenses (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  description text not null,
+  amount double precision not null check (amount > 0),
+  category text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.recurring_incomes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  description text not null,
+  amount double precision not null check (amount > 0),
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Marks which expense rows were auto-created from a recurring template, so applying recurring
+-- items is idempotent per month. Detaches (doesn't delete) past expenses if the template is removed.
+alter table public.expenses add column if not exists recurring_expense_id uuid references public.recurring_expenses(id) on delete set null;
+
+alter table public.recurring_expenses enable row level security;
+alter table public.recurring_incomes enable row level security;
+
+drop policy if exists "recurring_expenses_all_own" on public.recurring_expenses;
+create policy "recurring_expenses_all_own" on public.recurring_expenses
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "recurring_incomes_all_own" on public.recurring_incomes;
+create policy "recurring_incomes_all_own" on public.recurring_incomes
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

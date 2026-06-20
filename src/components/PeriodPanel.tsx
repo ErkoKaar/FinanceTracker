@@ -2,9 +2,10 @@
 // (a month, a year, or a history group). Used by PeriodView and HistoryView.
 import { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { TrendingUp, TrendingDown, PiggyBank, Trash2 } from "lucide-react";
-import { useDeleteExpense, type Expense } from "@/lib/finance-data";
+import { TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
+import { useCategories, useUpdateExpense, useDeleteExpense, type Expense } from "@/lib/finance-data";
 import { StatCard } from "@/components/StatCard";
+import { ExpenseRow } from "@/components/ExpenseRow";
 
 export function PeriodPanel({
   title,
@@ -21,6 +22,8 @@ export function PeriodPanel({
   onUpdateIncome?: (amount: number) => void;
   userId: string;
 }) {
+  const { data: categories = [] } = useCategories(userId);
+  const updateExpense = useUpdateExpense(userId);
   const deleteExpense = useDeleteExpense(userId);
 
   const total = expenses.reduce((a, e) => a + e.amount, 0);
@@ -130,23 +133,13 @@ export function PeriodPanel({
           <div className="px-5 py-4 border-b border-border text-sm font-medium">Entries</div>
           <ul>
             {expenses.slice(0, 20).map((e) => (
-              <li key={e.id} className="px-5 py-3 border-t border-border first:border-t-0 flex items-center justify-between text-sm">
-                <div>
-                  <div>{e.description}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {e.category} · {new Date(e.date).toLocaleDateString("en-GB")}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="tabular-nums">€{e.amount.toFixed(2)}</span>
-                  <button
-                    onClick={() => deleteExpense.mutate(e.id)}
-                    className="text-muted-foreground hover:text-destructive transition"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              </li>
+              <ExpenseRow
+                key={e.id}
+                expense={e}
+                categories={categories}
+                onSave={(updates) => updateExpense.mutate({ id: e.id, ...updates })}
+                onDelete={() => deleteExpense.mutate(e.id)}
+              />
             ))}
           </ul>
         </div>

@@ -1,11 +1,13 @@
-// Logged-in app shell: header/tabs/sign-out, switches between the Add/Month/Year/History tabs.
+// Logged-in app shell: header/tabs/sign-out, switches between the Add/Recurring/Month/Year/History tabs.
 import { useState } from "react";
 import { LogOut } from "lucide-react";
+import { useApplyRecurring } from "@/lib/finance-data";
 import { AddView } from "@/components/AddView";
+import { RecurringView } from "@/components/RecurringView";
 import { PeriodView } from "@/components/PeriodView";
 import { HistoryView } from "@/components/HistoryView";
 
-type Tab = "add" | "month" | "year" | "history";
+type Tab = "add" | "recurring" | "month" | "year" | "history";
 
 export function Dashboard({
   userId,
@@ -17,6 +19,7 @@ export function Dashboard({
   onSignOut: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("add");
+  useApplyRecurring(userId);
 
   return (
     <div className="min-h-screen">
@@ -28,6 +31,7 @@ export function Dashboard({
           <nav className="flex items-center gap-1 text-sm">
             {([
               ["add", "Add"],
+              ["recurring", "Recurring"],
               ["month", "Month"],
               ["year", "Year"],
               ["history", "History"],
@@ -55,6 +59,7 @@ export function Dashboard({
 
       <main className="max-w-5xl mx-auto px-6 py-10">
         {tab === "add" && <AddView userId={userId} email={email} />}
+        {tab === "recurring" && <RecurringView userId={userId} />}
         {tab === "month" && <PeriodView mode="month" userId={userId} />}
         {tab === "year" && <PeriodView mode="year" userId={userId} />}
         {tab === "history" && <HistoryView userId={userId} />}
