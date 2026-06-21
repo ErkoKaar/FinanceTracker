@@ -78,5 +78,11 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-feature-settings: "ss01", "cv11";
+    /* Backs up the viewport meta tag's zoom lock — also blocks double-tap-to-zoom on browsers
+       that don't fully honor user-scalable=no. */
+    touch-action: manipulation;
+    /* Safety net against any one element (long email, long description, ...) pushing the whole
+       page wider than the viewport on mobile. */
+    overflow-x: hidden;
   }
 }

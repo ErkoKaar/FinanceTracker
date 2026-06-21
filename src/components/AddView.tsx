@@ -17,7 +17,7 @@ export function AddView({ userId, email }: { userId: string; email: string }) {
   return (
     <div className="max-w-xl mx-auto">
       <p className="text-sm text-muted-foreground">Welcome back,</p>
-      <h1 className="text-3xl font-semibold tracking-tight mt-1">{email.split("@")[0]} 👋</h1>
+      <h1 className="text-3xl font-semibold tracking-tight mt-1 break-words">{email.split("@")[0]} 👋</h1>
       <p className="text-muted-foreground mt-2 text-sm">Add a new expense or income below.</p>
 
       <div className="mt-6 flex bg-card border border-border rounded-lg p-1 text-xs w-fit">
