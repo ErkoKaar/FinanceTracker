@@ -198,3 +198,40 @@ alter table public.budgets enable row level security;
 drop policy if exists "budgets_all_own" on public.budgets;
 create policy "budgets_all_own" on public.budgets
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- One row per device that opted in to push reminders (see src/lib/push.ts and the
+-- send-reminders Edge Function, which reads this table with the service role key to bypass RLS).
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.push_subscriptions enable row level security;
+
+drop policy if exists "push_subscriptions_all_own" on public.push_subscriptions;
+create policy "push_subscriptions_all_own" on public.push_subscriptions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Run this part only AFTER deploying the send-reminders Edge Function (see its file header for
+-- the deploy command). Calls it once a day; the function itself decides whether to actually send
+-- anything (Sundays + last day of the month) and is a no-op every other day.
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+select cron.schedule(
+  'send-reminders-daily',
+  '0 9 * * *', -- 09:00 UTC daily — adjust to taste
+  $$
+  select net.http_post(
+    url := 'https://rsrxnwhfwmizlljktbqs.supabase.co/functions/v1/send-reminders',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzcnhud2hmd21pemxsamt0YnFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NDQwNTIsImV4cCI6MjA5NzUyMDA1Mn0.qsUepTe0a2t8m6SIletV-_q2qZ-M0HNFhNMbOUDsgeU'
+    )
+  );
+  $$
+);

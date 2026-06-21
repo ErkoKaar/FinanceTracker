@@ -1,7 +1,8 @@
 // Logged-in app shell: header/tabs/sign-out, switches between the Add/Recurring/Month/Plan/Year/History tabs.
-import { useState } from "react";
-import { LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LogOut, Bell, BellOff } from "lucide-react";
 import { useApplyRecurring } from "@/lib/finance-data";
+import { isPushSupported, getPushSubscriptionStatus, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { AddView } from "@/components/AddView";
 import { RecurringView } from "@/components/RecurringView";
 import { PeriodView } from "@/components/PeriodView";
@@ -20,7 +21,26 @@ export function Dashboard({
   onSignOut: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("add");
+  const [pushEnabled, setPushEnabled] = useState(false);
   useApplyRecurring(userId);
+
+  useEffect(() => {
+    if (isPushSupported()) getPushSubscriptionStatus().then(setPushEnabled);
+  }, []);
+
+  async function togglePush() {
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+      } else {
+        await subscribeToPush(userId);
+        setPushEnabled(true);
+      }
+    } catch {
+      // Permission denied or unsupported — button just stays in its current state.
+    }
+  }
 
   return (
     <div className="min-h-screen">
@@ -62,13 +82,25 @@ export function Dashboard({
               </button>
             ))}
           </nav>
-          <button
-            onClick={onSignOut}
-            className="text-muted-foreground hover:text-foreground transition p-2"
-            aria-label="Log out"
-          >
-            <LogOut className="size-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {isPushSupported() && (
+              <button
+                onClick={togglePush}
+                className="text-muted-foreground hover:text-foreground transition p-2"
+                aria-label={pushEnabled ? "Disable reminders" : "Enable reminders"}
+                title={pushEnabled ? "Weekly/month-end reminders are on" : "Enable weekly/month-end reminders"}
+              >
+                {pushEnabled ? <Bell className="size-4 text-primary" /> : <BellOff className="size-4" />}
+              </button>
+            )}
+            <button
+              onClick={onSignOut}
+              className="text-muted-foreground hover:text-foreground transition p-2"
+              aria-label="Log out"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </div>
         </div>
       </header>
 

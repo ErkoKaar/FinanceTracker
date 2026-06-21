@@ -14,6 +14,14 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      // injectManifest (not the default generateSW) so src/sw.ts can add a custom `push` handler
+      // for the weekly/month-end reminder notifications — generateSW has no hook for that.
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
+      injectManifest: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       manifest: {
         name: "FinanceTracker",
         short_name: "FinanceTracker",
