@@ -25,49 +25,51 @@ export function CategoryBreakdown({
         {byCategory.length === 0 ? (
           <div className="p-10 text-center text-sm text-muted-foreground">{emptyLabel}</div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-5 py-2 font-normal">Category</th>
-                <th className="px-5 py-2 font-normal text-right">{budgets ? "Spent" : "Amount"}</th>
-                {budgets && <th className="px-5 py-2 font-normal text-right">Planned</th>}
-                {budgets && <th className="px-5 py-2 font-normal text-right">Remaining</th>}
-                <th className="px-5 py-2 font-normal text-right">%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {byCategory.map((c, i) => {
-                const planned = budgets?.[c.name];
-                const remaining = planned != null ? planned - c.value : null;
-                return (
-                  <tr key={c.name} className="border-t border-border">
-                    <td className="px-5 py-3 flex items-center gap-2.5">
-                      <span className="size-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-                      {c.name}
-                    </td>
-                    <td className="px-5 py-3 text-right tabular-nums">€{c.value.toFixed(2)}</td>
-                    {budgets && (
-                      <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
-                        {planned != null ? `€${planned.toFixed(2)}` : "—"}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-muted-foreground">
+                  <th className="px-5 py-2 font-normal whitespace-nowrap">Category</th>
+                  <th className="px-5 py-2 font-normal text-right whitespace-nowrap">{budgets ? "Spent" : "Amount"}</th>
+                  {budgets && <th className="px-5 py-2 font-normal text-right whitespace-nowrap">Planned</th>}
+                  {budgets && <th className="px-5 py-2 font-normal text-right whitespace-nowrap">Remaining</th>}
+                  <th className="px-5 py-2 font-normal text-right whitespace-nowrap">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byCategory.map((c, i) => {
+                  const planned = budgets?.[c.name];
+                  const remaining = planned != null ? planned - c.value : null;
+                  return (
+                    <tr key={c.name} className="border-t border-border">
+                      <td className="px-5 py-3 flex items-center gap-2.5 whitespace-nowrap">
+                        <span className="size-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                        {c.name}
                       </td>
-                    )}
-                    {budgets && (
-                      <td
-                        className={`px-5 py-3 text-right tabular-nums ${
-                          remaining != null && remaining < 0 ? "text-destructive" : "text-muted-foreground"
-                        }`}
-                      >
-                        {remaining != null ? `€${remaining.toFixed(2)}` : "—"}
+                      <td className="px-5 py-3 text-right tabular-nums whitespace-nowrap">€{c.value.toFixed(2)}</td>
+                      {budgets && (
+                        <td className="px-5 py-3 text-right tabular-nums text-muted-foreground whitespace-nowrap">
+                          {planned != null ? `€${planned.toFixed(2)}` : "—"}
+                        </td>
+                      )}
+                      {budgets && (
+                        <td
+                          className={`px-5 py-3 text-right tabular-nums whitespace-nowrap ${
+                            remaining != null && remaining < 0 ? "text-destructive" : "text-muted-foreground"
+                          }`}
+                        >
+                          {remaining != null ? `€${remaining.toFixed(2)}` : "—"}
+                        </td>
+                      )}
+                      <td className="px-5 py-3 text-right tabular-nums text-muted-foreground whitespace-nowrap">
+                        {total ? ((c.value / total) * 100).toFixed(0) : 0}%
                       </td>
-                    )}
-                    <td className="px-5 py-3 text-right tabular-nums text-muted-foreground">
-                      {total ? ((c.value / total) * 100).toFixed(0) : 0}%
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

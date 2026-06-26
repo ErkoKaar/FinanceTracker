@@ -18,11 +18,16 @@ function FullScreenMessage({ text }: { text: string }) {
 
 function App() {
   const isOnline = useOnlineStatus();
-  const { user, loading, signIn, signUp, signOut } = useAuth();
+  const { user, loading, signIn, signUp, signOut, displayName, updateDisplayName } = useAuth();
   if (!isOnline) return <OfflineNotice />;
   if (loading) return <FullScreenMessage text="Loading..." />;
   return user ? (
-    <Dashboard userId={user.id} email={user.email ?? ""} onSignOut={signOut} />
+    <Dashboard
+      userId={user.id}
+      displayName={displayName}
+      onUpdateDisplayName={updateDisplayName}
+      onSignOut={signOut}
+    />
   ) : (
     <Login signIn={signIn} signUp={signUp} />
   );

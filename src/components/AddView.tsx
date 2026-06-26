@@ -1,7 +1,7 @@
 // "Add" tab: add a one-off expense or income entry. A toggle switches between the two forms;
 // the expense form includes the category picker and inline "new category" input.
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import {
   useCategories,
   useAddCategory,
@@ -11,13 +11,21 @@ import {
   useAddIncome,
 } from "@/lib/finance-data";
 
-export function AddView({ userId, email }: { userId: string; email: string }) {
+export function AddView({
+  userId,
+  displayName,
+  onUpdateDisplayName,
+}: {
+  userId: string;
+  displayName: string;
+  onUpdateDisplayName: (name: string) => void;
+}) {
   const [kind, setKind] = useState<"expense" | "income">("expense");
 
   return (
     <div className="max-w-xl mx-auto">
       <p className="text-sm text-muted-foreground">Welcome back,</p>
-      <h1 className="text-3xl font-semibold tracking-tight mt-1 break-words">{email.split("@")[0]} 👋</h1>
+      <EditableName name={displayName} onSave={onUpdateDisplayName} />
       <p className="text-muted-foreground mt-2 text-sm">Add a new expense or income below.</p>
 
       <div className="mt-6 flex bg-card border border-border rounded-lg p-1 text-xs w-fit">
@@ -36,6 +44,51 @@ export function AddView({ userId, email }: { userId: string; email: string }) {
 
       {kind === "expense" ? <AddExpenseForm userId={userId} /> : <AddIncomeForm userId={userId} />}
     </div>
+  );
+}
+
+function EditableName({ name, onSave }: { name: string; onSave: (name: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+
+  function save() {
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== name) onSave(trimmed);
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") {
+            setValue(name);
+            setEditing(false);
+          }
+        }}
+        className="mt-1 w-full max-w-full bg-input border border-border rounded-lg px-2 -mx-2 text-3xl font-semibold tracking-tight focus:outline-none focus:ring-2 focus:ring-ring/50"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setValue(name);
+        setEditing(true);
+      }}
+      className="group mt-1 flex items-center gap-2 text-left max-w-full"
+      aria-label="Edit your name"
+    >
+      <h1 className="text-3xl font-semibold tracking-tight break-words">{name} 👋</h1>
+      <Pencil className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition shrink-0" />
+    </button>
   );
 }
 

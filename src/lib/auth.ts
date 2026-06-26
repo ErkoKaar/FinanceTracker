@@ -32,5 +32,12 @@ export function useAuth() {
 
   const signOut = useCallback(() => supabase.auth.signOut(), []);
 
-  return { user, loading, signIn, signUp, signOut };
+  const displayName = user?.user_metadata?.display_name ?? user?.email?.split("@")[0] ?? "";
+
+  const updateDisplayName = useCallback(async (name: string) => {
+    const { data, error } = await supabase.auth.updateUser({ data: { display_name: name } });
+    if (!error && data.user) setUser(data.user);
+  }, []);
+
+  return { user, loading, signIn, signUp, signOut, displayName, updateDisplayName };
 }

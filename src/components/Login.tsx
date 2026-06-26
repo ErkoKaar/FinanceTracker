@@ -1,7 +1,7 @@
 // Logged-out screen: email/password login + registration form.
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import logo from "@/assets/finance-tracker-logo.png";
+import logo from "@/assets/finance-tracker-logo-transparent.png";
 
 export function Login({
   signIn,

@@ -27,11 +27,13 @@ const REVIEW_TABS: [Tab, string][] = [
 
 export function Dashboard({
   userId,
-  email,
+  displayName,
+  onUpdateDisplayName,
   onSignOut,
 }: {
   userId: string;
-  email: string;
+  displayName: string;
+  onUpdateDisplayName: (name: string) => void;
   onSignOut: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("add");
@@ -180,7 +182,9 @@ export function Dashboard({
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-10">
-        {tab === "add" && <AddView userId={userId} email={email} />}
+        {tab === "add" && (
+          <AddView userId={userId} displayName={displayName} onUpdateDisplayName={onUpdateDisplayName} />
+        )}
         {tab === "recurring" && <RecurringView userId={userId} />}
         {tab === "month" && <PeriodView mode="month" userId={userId} />}
         {tab === "plan" && <PlanView userId={userId} />}
