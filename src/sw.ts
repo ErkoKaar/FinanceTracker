@@ -12,8 +12,8 @@ self.addEventListener("push", (event) => {
   const title = data.title ?? "FinanceTracker";
   const options: NotificationOptions = {
     body: data.body ?? "",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
+    icon: "/icon-192-v2.png",
+    badge: "/icon-192-v2.png",
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
