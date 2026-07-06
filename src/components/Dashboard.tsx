@@ -1,7 +1,8 @@
 // Logged-in app shell: header/tabs/sign-out, switches between the Add/Recurring/Month/Plan/Year/History tabs.
-// The tab nav collapses into a dropdown below the `md` breakpoint, since all 6 tabs don't fit a phone width.
-import { useEffect, useState } from "react";
-import { LogOut, Bell, BellOff, Download, Menu, X } from "lucide-react";
+// The desktop nav groups tabs into two "Manage"/"Review" dropdowns; below the `md` breakpoint it
+// collapses into a single full-width dropdown with the same two groups as labeled sections.
+import { useEffect, useRef, useState } from "react";
+import { LogOut, Bell, BellOff, Download, Menu, X, ChevronDown } from "lucide-react";
 import { useApplyRecurring, useApplyPreviousMonthCarryover } from "@/lib/finance-data";
 import { isPushSupported, getPushSubscriptionStatus, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { exportAllData } from "@/lib/export";
@@ -10,19 +11,30 @@ import { RecurringView } from "@/components/RecurringView";
 import { PeriodView } from "@/components/PeriodView";
 import { PlanView } from "@/components/PlanView";
 import { HistoryView } from "@/components/HistoryView";
+import logo from "@/assets/finance-tracker-logo-transparent.png";
 
 type Tab = "add" | "recurring" | "month" | "plan" | "year" | "history";
+type GroupId = "manage" | "review";
 
-const INPUT_TABS: [Tab, string][] = [
-  ["add", "Add"],
-  ["recurring", "Recurring"],
-  ["plan", "Plan"],
-];
-
-const REVIEW_TABS: [Tab, string][] = [
-  ["month", "Month"],
-  ["year", "Year"],
-  ["history", "History"],
+const TAB_GROUPS: { id: GroupId; label: string; tabs: [Tab, string][] }[] = [
+  {
+    id: "manage",
+    label: "Manage",
+    tabs: [
+      ["add", "Add"],
+      ["recurring", "Recurring"],
+      ["plan", "Plan"],
+    ],
+  },
+  {
+    id: "review",
+    label: "Review",
+    tabs: [
+      ["month", "Month"],
+      ["year", "Year"],
+      ["history", "History"],
+    ],
+  },
 ];
 
 export function Dashboard({
@@ -40,13 +52,27 @@ export function Dashboard({
   const [pushEnabled, setPushEnabled] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<GroupId | null>(null);
+  const navRef = useRef<HTMLElement>(null);
   useApplyRecurring(userId);
   useApplyPreviousMonthCarryover(userId);
 
   function selectTab(k: Tab) {
     setTab(k);
     setMobileMenuOpen(false);
+    setOpenGroup(null);
   }
+
+  // Closes an open desktop dropdown when clicking anywhere outside the nav (hover already closes
+  // it on mouse-leave; this covers keyboard/click-elsewhere cases).
+  useEffect(() => {
+    if (!openGroup) return;
+    function handleClick(e: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) setOpenGroup(null);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [openGroup]);
 
   async function handleExport() {
     setExporting(true);
@@ -87,33 +113,56 @@ export function Dashboard({
             >
               {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
             </button>
+            <img src={logo} alt="" className="h-7 w-7 logo-glow" />
             <span className="font-semibold tracking-tight">FinanceTracker</span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-1 text-sm">
-            {INPUT_TABS.map(([k, label]) => (
-              <button
-                key={k}
-                onClick={() => selectTab(k)}
-                className={`px-3 py-1.5 rounded-md transition ${
-                  tab === k ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-            <div className="w-px h-5 bg-border mx-2" />
-            {REVIEW_TABS.map(([k, label]) => (
-              <button
-                key={k}
-                onClick={() => selectTab(k)}
-                className={`px-3 py-1.5 rounded-md transition ${
-                  tab === k ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <nav ref={navRef} className="hidden md:flex items-center gap-1 text-sm">
+            {TAB_GROUPS.map((group) => {
+              const activeTab = group.tabs.find(([k]) => k === tab);
+              return (
+                <div
+                  key={group.id}
+                  className="relative"
+                  onMouseEnter={() => setOpenGroup(group.id)}
+                  onMouseLeave={() => setOpenGroup((g) => (g === group.id ? null : g))}
+                >
+                  <button
+                    onClick={() => setOpenGroup((g) => (g === group.id ? null : group.id))}
+                    aria-expanded={openGroup === group.id}
+                    className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${
+                      activeTab ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span>
+                      {group.label}
+                      {activeTab && <span className="text-muted-foreground"> · {activeTab[1]}</span>}
+                    </span>
+                    <ChevronDown
+                      className={`size-3.5 transition-transform ${openGroup === group.id ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {openGroup === group.id && (
+                    <div className="absolute top-full left-0 mt-1 min-w-36 bg-popover border border-border rounded-lg shadow-lg py-1 z-30">
+                      {group.tabs.map(([k, label]) => (
+                        <button
+                          key={k}
+                          onClick={() => selectTab(k)}
+                          className={`w-full text-left px-3 py-1.5 transition ${
+                            tab === k
+                              ? "bg-secondary text-foreground"
+                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-1">
@@ -153,29 +202,24 @@ export function Dashboard({
               aria-label="Close menu"
               onClick={() => setMobileMenuOpen(false)}
             />
-            <nav className="md:hidden absolute top-16 left-0 right-0 z-20 bg-background border-b border-border px-6 py-3 flex flex-col gap-1 text-sm">
-              {INPUT_TABS.map(([k, label]) => (
-                <button
-                  key={k}
-                  onClick={() => selectTab(k)}
-                  className={`px-3 py-2 rounded-md text-left transition ${
-                    tab === k ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-              <div className="h-px bg-border my-1" />
-              {REVIEW_TABS.map(([k, label]) => (
-                <button
-                  key={k}
-                  onClick={() => selectTab(k)}
-                  className={`px-3 py-2 rounded-md text-left transition ${
-                    tab === k ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
+            <nav className="md:hidden absolute top-16 left-0 right-0 z-20 bg-background border-b border-border px-6 py-3 flex flex-col text-sm">
+              {TAB_GROUPS.map((group, i) => (
+                <div key={group.id} className={i > 0 ? "mt-3" : undefined}>
+                  <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+                    {group.label}
+                  </div>
+                  {group.tabs.map(([k, label]) => (
+                    <button
+                      key={k}
+                      onClick={() => selectTab(k)}
+                      className={`w-full px-3 py-2 rounded-md text-left transition ${
+                        tab === k ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               ))}
             </nav>
           </>

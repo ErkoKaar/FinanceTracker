@@ -86,3 +86,26 @@
     overflow-x: hidden;
   }
 }
+
+/* Navbar logo mark: dual-tone glow (mint + gold) echoing the icon's own gradient, with a slow
+   breathing pulse — a quiet nod to the "line going up" of a finance tracker. */
+.logo-glow {
+  filter: drop-shadow(0 0 4px oklch(0.86 0.14 165 / 0.45)) drop-shadow(0 0 10px oklch(0.78 0.17 60 / 0.28));
+  animation: logo-pulse 6s ease-in-out infinite;
+}
+
+@keyframes logo-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px oklch(0.86 0.14 165 / 0.4)) drop-shadow(0 0 9px oklch(0.78 0.17 60 / 0.22));
+  }
+  50% {
+    filter: drop-shadow(0 0 7px oklch(0.86 0.14 165 / 0.65)) drop-shadow(0 0 16px oklch(0.78 0.17 60 / 0.4));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-glow {
+    animation: none;
+  }
+}
