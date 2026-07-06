@@ -1,6 +1,6 @@
 // Stat cards + category breakdowns + expense/income entry lists for a given period
 // (a month, a year, or a history group). Used by PeriodView and HistoryView.
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
 import {
   useCategories,
@@ -18,6 +18,8 @@ import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { TrendChart } from "@/components/TrendChart";
 import { ExpenseRow } from "@/components/ExpenseRow";
 import { IncomeRow } from "@/components/IncomeRow";
+
+const ENTRY_LIMIT = 10;
 
 function groupByCategory(items: { category: string; amount: number }[]) {
   const m = new Map<string, number>();
@@ -75,6 +77,11 @@ export function PeriodPanel({
 
   const byIncomeCat = useMemo(() => groupByCategory(incomes), [incomes]);
 
+  const [showAllExpenses, setShowAllExpenses] = useState(false);
+  const [showAllIncomes, setShowAllIncomes] = useState(false);
+  const visibleExpenses = showAllExpenses ? expenses : expenses.slice(0, ENTRY_LIMIT);
+  const visibleIncomes = showAllIncomes ? incomes : incomes.slice(0, ENTRY_LIMIT);
+
   return (
     <div className="space-y-8">
       <div className="flex items-end justify-between">
@@ -115,7 +122,7 @@ export function PeriodPanel({
           <div className="bg-card border border-border rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-border text-sm font-medium">Entries</div>
             <ul>
-              {expenses.slice(0, 20).map((e) => (
+              {visibleExpenses.map((e) => (
                 <ExpenseRow
                   key={e.id}
                   expense={e}
@@ -125,6 +132,14 @@ export function PeriodPanel({
                 />
               ))}
             </ul>
+            {!showAllExpenses && expenses.length > ENTRY_LIMIT && (
+              <button
+                onClick={() => setShowAllExpenses(true)}
+                className="w-full px-5 py-3 text-sm text-muted-foreground hover:text-foreground transition border-t border-border"
+              >
+                Show all {expenses.length} entries
+              </button>
+            )}
           </div>
         )}
 
@@ -132,7 +147,7 @@ export function PeriodPanel({
           <div className="bg-card border border-border rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-border text-sm font-medium">Income</div>
             <ul>
-              {incomes.slice(0, 20).map((i) => (
+              {visibleIncomes.map((i) => (
                 <IncomeRow
                   key={i.id}
                   income={i}
@@ -142,6 +157,14 @@ export function PeriodPanel({
                 />
               ))}
             </ul>
+            {!showAllIncomes && incomes.length > ENTRY_LIMIT && (
+              <button
+                onClick={() => setShowAllIncomes(true)}
+                className="w-full px-5 py-3 text-sm text-muted-foreground hover:text-foreground transition border-t border-border"
+              >
+                Show all {incomes.length} entries
+              </button>
+            )}
           </div>
         )}
       </div>
