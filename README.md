@@ -4,21 +4,47 @@ A minimal, dark-themed personal finance tracker — track expenses and income by
 budgets, automate recurring transactions, see year-over-year trends, and get nudged with a push
 notification if you forget to log something. Installable as a PWA on phone or desktop.
 
-Live: https://isiklikfinancetracker.netlify.app
+
+
+## Screenshots
+
+**Manage**
+
+| Add expense | Add income |
+|---|---|
+| ![Expense view](public/Expense_View.png) | ![Income view](public/Income_View.png) |
+
+| Recurring | Plan |
+|---|---|
+| ![Recurring view](public/Recurring_View.png) | ![Plan view](public/Plan_View.png) |
+
+**Review**
+
+| Month | Year |
+|---|---|
+| ![Month view](public/Month_View.png) | ![Year view](public/Year_View.png) |
+
+| History |
+|---|
+| ![History view](public/History_View.png) |
 
 ## Features
 
 - **Email/password auth** (Supabase Auth) — your data is private, scoped per account via Postgres
-  Row Level Security.
+  Row Level Security. Display name is editable from the Add tab.
 - **Expenses & income**, each with their own category list (e.g. expense categories like
   *Food*/*Transport*, income categories like *Salary*/*Freelance*).
 - **Recurring expenses & income** — set up once (with an optional day-of-month), and they're
   materialized into real entries automatically each month.
+- **Previous month's balance carryover** — the first time the app is opened in a new month, its
+  positive balance (income − expenses) is added as an income entry, "Eelmise kuu ülejääk", in the
+  new month.
 - **Plan / budgets** — set how much you intend to spend per category each month; the Month view
   shows Spent / Planned / Remaining side by side, with overspend highlighted.
 - **Month / Year / History** views — category breakdowns (table + pie chart), a 12-month
   income/expenses/balance trend chart (with per-category drill-down) on the Year view, and a
-  collapsible month-by-month or year-by-year history.
+  collapsible month-by-month or year-by-year history. Entry lists show the first 10 rows with a
+  "Show all" button to reveal the rest.
 - **Push notifications** — a weekly (Sunday) and month-end reminder to log anything you forgot,
   delivered via real Web Push even when the app is closed.
 - **PWA** — installable, works offline-aware (shows a clear "you're offline" screen instead of a
@@ -52,7 +78,8 @@ src/
     supabase.ts       Supabase client
     auth.ts           useAuth() — session state, sign in/up/out
     finance-data.ts    All TanStack Query hooks: expenses, incomes, categories, recurring
-                       expenses/incomes, budgets, and useApplyRecurring (the monthly automation)
+                       expenses/incomes, budgets, useApplyRecurring (the monthly automation), and
+                       useApplyPreviousMonthCarryover (previous month's balance carryover)
     push.ts            Web Push subscribe/unsubscribe helpers
     export.ts          JSON backup export
     use-online-status.ts
@@ -133,3 +160,7 @@ environment variables in Netlify's site settings, and update Supabase's Auth **S
   concept — so they're editable/deletable exactly like manually-entered ones afterward.
 - **Budgets are monthly only** — the Year view and "History → By year" intentionally don't show
   Planned/Remaining columns, since a budget is inherently a per-month concept.
+
+## License
+
+[GPL-3.0](LICENSE.md)
