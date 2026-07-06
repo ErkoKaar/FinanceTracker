@@ -2,7 +2,7 @@
 // The tab nav collapses into a dropdown below the `md` breakpoint, since all 6 tabs don't fit a phone width.
 import { useEffect, useState } from "react";
 import { LogOut, Bell, BellOff, Download, Menu, X } from "lucide-react";
-import { useApplyRecurring } from "@/lib/finance-data";
+import { useApplyRecurring, useApplyPreviousMonthCarryover } from "@/lib/finance-data";
 import { isPushSupported, getPushSubscriptionStatus, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { exportAllData } from "@/lib/export";
 import { AddView } from "@/components/AddView";
@@ -41,6 +41,7 @@ export function Dashboard({
   const [exporting, setExporting] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useApplyRecurring(userId);
+  useApplyPreviousMonthCarryover(userId);
 
   function selectTab(k: Tab) {
     setTab(k);
