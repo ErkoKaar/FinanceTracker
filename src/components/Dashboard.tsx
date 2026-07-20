@@ -63,8 +63,8 @@ export function Dashboard({
     setOpenGroup(null);
   }
 
-  // Closes an open desktop dropdown when clicking anywhere outside the nav (hover already closes
-  // it on mouse-leave; this covers keyboard/click-elsewhere cases).
+  // Closes an open desktop dropdown when clicking anywhere outside the nav — the dropdown only
+  // opens/closes on click (no hover), so this is the sole way to dismiss it without picking a tab.
   useEffect(() => {
     if (!openGroup) return;
     function handleClick(e: MouseEvent) {
@@ -121,12 +121,7 @@ export function Dashboard({
             {TAB_GROUPS.map((group) => {
               const activeTab = group.tabs.find(([k]) => k === tab);
               return (
-                <div
-                  key={group.id}
-                  className="relative"
-                  onMouseEnter={() => setOpenGroup(group.id)}
-                  onMouseLeave={() => setOpenGroup((g) => (g === group.id ? null : g))}
-                >
+                <div key={group.id} className="relative">
                   <button
                     onClick={() => setOpenGroup((g) => (g === group.id ? null : group.id))}
                     aria-expanded={openGroup === group.id}
