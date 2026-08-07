@@ -65,7 +65,7 @@ every row is scoped to `auth.uid()`), Supabase Auth, and one Deno Edge Function
 month-end push reminders. There is no separate backend server — the client talks to Supabase
 directly, authorized by RLS rather than a custom API layer.
 
-**Hosting** — [Netlify](https://netlify.com) (frontend), Supabase (database/auth/functions).
+**Hosting** — [Vercel](https://vercel.com) (frontend), Supabase (database/auth/functions).
 
 ## Project structure
 
@@ -90,7 +90,7 @@ supabase/
                       manually in the Supabase SQL editor (see "Database setup" below)
   functions/
     send-reminders/   Edge Function that sends the weekly/month-end push notifications
-netlify.toml          Build settings, SPA redirect, PWA cache headers
+vercel.json           SPA rewrite + PWA cache headers (build settings are auto-detected)
 ```
 
 ## Getting started
@@ -144,10 +144,11 @@ last day of the month — it's a no-op every other day.
 
 ## Deployment
 
-Connected to Netlify via this GitHub repo (`netlify.toml` defines the build command/publish dir,
-SPA fallback redirect, and cache headers for `sw.js`/`manifest.webmanifest`). Set the same three
-environment variables in Netlify's site settings, and update Supabase's Auth **Site URL** /
-**Redirect URLs** to your Netlify domain so email confirmation/reset links point to the right place.
+Connected to Vercel via this GitHub repo. Vercel auto-detects the Vite framework preset
+(`npm run build`, output `dist`); `vercel.json` adds the SPA fallback rewrite and cache headers
+for `sw.js`/`manifest.webmanifest`. Set the same three environment variables in the Vercel
+project settings (Settings → Environment Variables), and update Supabase's Auth **Site URL** /
+**Redirect URLs** to your Vercel domain so email confirmation/reset links point to the right place.
 
 ## Notes on the architecture
 
