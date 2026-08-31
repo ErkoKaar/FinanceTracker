@@ -462,3 +462,39 @@ export function useApplyPreviousMonthCarryover(userId: string | undefined) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readyToApply, incomesAll, expensesAll]);
 }
+
+// Bank accounts connected via Enable Banking (rows are written by the bank-connect/bank-sync
+// Edge Functions; the client only reads status and deletes on disconnect — see src/lib/bank.ts
+// for starting/completing the connection flow).
+export type BankConnection = {
+  id: string;
+  account_name: string;
+  valid_until: string; // ISO — consent expiry; the user must re-authorize at the bank after this
+  last_synced_at: string | null;
+};
+
+export function useBankConnections(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["bank_connections", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bank_connections")
+        .select("id, account_name, valid_until, last_synced_at")
+        .order("created_at");
+      if (error) throw error;
+      return data as BankConnection[];
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useDisconnectBank(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("bank_connections").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bank_connections", userId] }),
+  });
+}

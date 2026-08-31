@@ -235,3 +235,55 @@ select cron.schedule(
   );
   $$
 );
+
+-- Bank accounts connected through Enable Banking (see the bank-connect Edge Function). Rows are
+-- created/updated by the Edge Functions with the service role key; the client only reads them
+-- (connection status UI) and deletes them (disconnect). account_hash is stable across consent
+-- renewals, so re-authorizing updates the existing row instead of duplicating the account.
+create table if not exists public.bank_connections (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  session_id text not null,
+  account_uid text not null,
+  account_hash text not null,
+  account_name text not null default 'Account',
+  valid_until timestamptz not null,
+  last_synced_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (user_id, account_hash)
+);
+
+alter table public.bank_connections enable row level security;
+
+drop policy if exists "bank_connections_select_own" on public.bank_connections;
+create policy "bank_connections_select_own" on public.bank_connections
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "bank_connections_delete_own" on public.bank_connections;
+create policy "bank_connections_delete_own" on public.bank_connections
+  for delete using (auth.uid() = user_id);
+
+-- Marks rows imported from the bank (mirrors the recurring_*_id pattern). The unique indexes are
+-- what makes re-syncing overlapping date windows idempotent (ON CONFLICT DO NOTHING); manual rows
+-- keep a null id, and nulls never conflict with each other.
+alter table public.expenses add column if not exists bank_transaction_id text;
+alter table public.incomes add column if not exists bank_transaction_id text;
+create unique index if not exists expenses_user_bank_tx_key on public.expenses (user_id, bank_transaction_id);
+create unique index if not exists incomes_user_bank_tx_key on public.incomes (user_id, bank_transaction_id);
+
+-- Run this part only AFTER deploying the bank-sync Edge Function (see its file header). Daily
+-- import of new bank transactions; 05:30 UTC is after banks' nightly maintenance windows. Many
+-- banks allow only ~4 unattended fetches per day, so keep this at once daily.
+select cron.schedule(
+  'bank-sync-daily',
+  '30 5 * * *',
+  $$
+  select net.http_post(
+    url := 'https://rsrxnwhfwmizlljktbqs.supabase.co/functions/v1/bank-sync',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzcnhud2hmd21pemxsamt0YnFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NDQwNTIsImV4cCI6MjA5NzUyMDA1Mn0.qsUepTe0a2t8m6SIletV-_q2qZ-M0HNFhNMbOUDsgeU'
+    )
+  );
+  $$
+);

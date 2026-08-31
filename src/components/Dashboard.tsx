@@ -2,9 +2,10 @@
 // The desktop nav groups tabs into two "Manage"/"Review" dropdowns; below the `md` breakpoint it
 // collapses into a single full-width dropdown with the same two groups as labeled sections.
 import { useEffect, useRef, useState } from "react";
-import { LogOut, Bell, BellOff, Download, Menu, X, ChevronDown } from "lucide-react";
-import { useApplyRecurring, useApplyPreviousMonthCarryover } from "@/lib/finance-data";
+import { LogOut, Bell, BellOff, Download, Landmark, Menu, X, ChevronDown } from "lucide-react";
+import { useApplyRecurring, useApplyPreviousMonthCarryover, useBankConnections, useDisconnectBank } from "@/lib/finance-data";
 import { isPushSupported, getPushSubscriptionStatus, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
+import { startBankAuth } from "@/lib/bank";
 import { exportAllData } from "@/lib/export";
 import { AddView } from "@/components/AddView";
 import { RecurringView } from "@/components/RecurringView";
@@ -101,6 +102,40 @@ export function Dashboard({
     }
   }
 
+  const { data: bankConnections = [] } = useBankConnections(userId);
+  const disconnectBank = useDisconnectBank(userId);
+  const bankConnected = bankConnections.length > 0;
+  // Consent lasts max ~180 days; warn (amber icon + renew prompt) within the last 14.
+  const bankExpiresSoon = bankConnections.some(
+    (c) => new Date(c.valid_until).getTime() - Date.now() < 14 * 24 * 3600 * 1000
+  );
+  const [bankBusy, setBankBusy] = useState(false);
+
+  async function handleBank() {
+    setBankBusy(true);
+    try {
+      if (!bankConnected) {
+        if (confirm("Connect your Swedbank account? You'll be redirected to the bank to approve access.")) {
+          await startBankAuth(); // navigates away on success
+        }
+      } else if (
+        confirm(
+          bankExpiresSoon
+            ? "Your bank connection is expiring — renew it now? (You'll be redirected to the bank.)"
+            : "Bank is connected. Renew the connection now? (Cancel to keep it as is.)"
+        )
+      ) {
+        await startBankAuth();
+      } else if (!bankExpiresSoon && confirm("Disconnect the bank instead? Already imported transactions will stay.")) {
+        disconnectBank.mutate(bankConnections.map((c) => c.id));
+      }
+    } catch {
+      alert("Could not reach the bank connection service. Try again in a moment.");
+    } finally {
+      setBankBusy(false);
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-border sticky top-0 bg-background/80 backdrop-blur z-10">
@@ -169,6 +204,23 @@ export function Dashboard({
               title="Download a backup of all your data"
             >
               <Download className="size-4" />
+            </button>
+            <button
+              onClick={handleBank}
+              disabled={bankBusy}
+              className="text-muted-foreground hover:text-foreground transition p-2 disabled:opacity-50"
+              aria-label={bankConnected ? "Manage bank connection" : "Connect bank"}
+              title={
+                bankConnected
+                  ? bankExpiresSoon
+                    ? "Bank connection expiring soon — click to renew"
+                    : "Bank connected — automatic imports are on"
+                  : "Connect your bank for automatic imports"
+              }
+            >
+              <Landmark
+                className={`size-4 ${bankConnected ? (bankExpiresSoon ? "text-amber-500" : "text-primary") : ""}`}
+              />
             </button>
             {isPushSupported() && (
               <button

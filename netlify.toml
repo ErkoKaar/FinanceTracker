@@ -1,0 +1,24 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Single-page app: any path that isn't a real file falls back to index.html (TanStack Router
+# handles routing client-side). Only one route exists today, but this matters as soon as a second
+# route is added, and is what makes a hard refresh / direct link to a non-root URL work at all.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# The service worker and manifest must always be re-checked, not served stale from a CDN cache —
+# browsers already re-check sw.js at least every 24h, but this avoids Netlify's CDN adding its own
+# longer cache on top of that.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "no-cache"
