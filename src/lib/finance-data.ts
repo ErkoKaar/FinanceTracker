@@ -406,63 +406,6 @@ export function useApplyRecurring(userId: string | undefined) {
   }, [readyToApply, recurringExpenses, recurringIncomes, expensesAll, incomesAll]);
 }
 
-const CARRYOVER_DESCRIPTION = "Eelmise kuu ülejääk";
-
-// Side-effect-only hook: the first time the app is opened in a new calendar month, adds an income
-// row equal to the previous month's balance (income - expenses), labeled "Eelmise kuu ülejääk" -
-// only when that balance is positive. Not tied to a recurring_income row (duplicate guard is the
-// description + current month, same idea as the recurring_*_id check in useApplyRecurring). Call
-// once from Dashboard, alongside useApplyRecurring.
-export function useApplyPreviousMonthCarryover(userId: string | undefined) {
-  const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
-  const { data: incomesAll = [], isLoading: incomesLoading } = useIncomes(userId);
-  const addIncome = useAddIncome(userId);
-  const appliedRef = useRef(new Set<string>());
-
-  const readyToApply = !!userId && !expensesLoading && !incomesLoading;
-
-  useEffect(() => {
-    if (!readyToApply) return;
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const key = `carryover-${year}-${month}`;
-    if (appliedRef.current.has(key)) return;
-
-    const prevDate = new Date(year, month - 2, 1);
-    const prevYear = prevDate.getFullYear();
-    const prevMonth = prevDate.getMonth() + 1;
-
-    const inMonth = (dateStr: string, y: number, m: number) => {
-      const d = new Date(dateStr);
-      return d.getFullYear() === y && d.getMonth() + 1 === m;
-    };
-    const prevIncomeTotal = incomesAll
-      .filter((i) => inMonth(i.date, prevYear, prevMonth))
-      .reduce((sum, i) => sum + i.amount, 0);
-    const prevExpenseTotal = expensesAll
-      .filter((e) => inMonth(e.date, prevYear, prevMonth))
-      .reduce((sum, e) => sum + e.amount, 0);
-    const prevBalance = prevIncomeTotal - prevExpenseTotal;
-
-    const alreadyApplied = incomesAll.some(
-      (i) => i.description === CARRYOVER_DESCRIPTION && inMonth(i.date, year, month)
-    );
-
-    appliedRef.current.add(key);
-    if (!alreadyApplied && prevBalance > 0) {
-      addIncome.mutate({
-        amount: prevBalance,
-        description: CARRYOVER_DESCRIPTION,
-        category: "Other",
-        date: new Date(year, month - 1, 1).toISOString(),
-        recurring_income_id: null,
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readyToApply, incomesAll, expensesAll]);
-}
-
 // Bank accounts connected via Enable Banking (rows are written by the bank-connect/bank-sync
 // Edge Functions; the client only reads status and deletes on disconnect — see src/lib/bank.ts
 // for starting/completing the connection flow).

@@ -3,7 +3,7 @@
 // collapses into a single full-width dropdown with the same two groups as labeled sections.
 import { useEffect, useRef, useState } from "react";
 import { LogOut, Bell, BellOff, Download, Landmark, Menu, X, ChevronDown } from "lucide-react";
-import { useApplyRecurring, useApplyPreviousMonthCarryover, useBankConnections, useDisconnectBank } from "@/lib/finance-data";
+import { useApplyRecurring, useBankConnections, useDisconnectBank } from "@/lib/finance-data";
 import { isPushSupported, getPushSubscriptionStatus, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { startBankAuth } from "@/lib/bank";
 import { exportAllData } from "@/lib/export";
@@ -56,7 +56,6 @@ export function Dashboard({
   const [openGroup, setOpenGroup] = useState<GroupId | null>(null);
   const navRef = useRef<HTMLElement>(null);
   useApplyRecurring(userId);
-  useApplyPreviousMonthCarryover(userId);
 
   function selectTab(k: Tab) {
     setTab(k);

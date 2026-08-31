@@ -36,9 +36,9 @@ notification if you forget to log something. Installable as a PWA on phone or de
   *Food*/*Transport*, income categories like *Salary*/*Freelance*).
 - **Recurring expenses & income** — set up once (with an optional day-of-month), and they're
   materialized into real entries automatically each month.
-- **Previous month's balance carryover** — the first time the app is opened in a new month, its
-  positive balance (income − expenses) is added as an income entry, "Eelmise kuu ülejääk", in the
-  new month.
+- **Bank import (Enable Banking)** — connect a bank account (Swedbank EE) and booked transactions
+  are imported automatically every day, with the account's real balance shown on the Month view.
+  Categories are learned from how you've categorized earlier transactions with the same description.
 - **Plan / budgets** — set how much you intend to spend per category each month; the Month view
   shows Spent / Planned / Remaining side by side, with overspend highlighted.
 - **Month / Year / History** views — category breakdowns (table + pie chart), a 12-month
@@ -78,8 +78,8 @@ src/
     supabase.ts       Supabase client
     auth.ts           useAuth() — session state, sign in/up/out
     finance-data.ts    All TanStack Query hooks: expenses, incomes, categories, recurring
-                       expenses/incomes, budgets, useApplyRecurring (the monthly automation), and
-                       useApplyPreviousMonthCarryover (previous month's balance carryover)
+                       expenses/incomes, budgets, bank connections, and useApplyRecurring (the
+                       monthly automation)
     push.ts            Web Push subscribe/unsubscribe helpers
     export.ts          JSON backup export
     use-online-status.ts
