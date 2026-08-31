@@ -92,6 +92,8 @@ export async function syncAccount(supabase: any, conn: BankConnection, dateFrom:
 
   for (const table of ["expenses", "incomes"] as const) {
     const tableRows = [...rows.values()].filter((r) => r.table === table).map((r) => r.row);
+    if (tableRows.length === 0) continue;
+    await applyLearnedCategories(supabase, conn.user_id, table, tableRows);
     for (let i = 0; i < tableRows.length; i += 500) {
       const { error } = await supabase.from(table).upsert(tableRows.slice(i, i + 500), {
         onConflict: "user_id,bank_transaction_id",
@@ -116,6 +118,39 @@ export async function syncAccount(supabase: any, conn: BankConnection, dateFrom:
   if (error) throw error;
 
   return rows.size;
+}
+
+// "Learn from history": if the user has previously categorized a row with the same description
+// (e.g. moved a "RIMI EESTI FOOD AS" expense to Food), new imports with that exact description
+// reuse the category instead of landing in "Other". Most recent categorization wins. This is why
+// manually re-categorizing an imported row once is enough to teach all future imports.
+// deno-lint-ignore no-explicit-any
+async function applyLearnedCategories(
+  supabase: any,
+  userId: string,
+  table: "expenses" | "incomes",
+  rows: Record<string, unknown>[]
+) {
+  const descriptions = [...new Set(rows.map((r) => r.description as string))];
+  const learned = new Map<string, string>();
+  for (let i = 0; i < descriptions.length; i += 200) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("description, category, date")
+      .eq("user_id", userId)
+      .in("description", descriptions.slice(i, i + 200))
+      .neq("category", "Other")
+      .order("date", { ascending: false })
+      .limit(1000);
+    if (error) throw error;
+    for (const existing of data ?? []) {
+      if (!learned.has(existing.description)) learned.set(existing.description, existing.category);
+    }
+  }
+  for (const row of rows) {
+    const category = learned.get(row.description as string);
+    if (category) row.category = category;
+  }
 }
 
 // Prefer the "money usable right now" figure over accounting ones: interim available (ITAV),
