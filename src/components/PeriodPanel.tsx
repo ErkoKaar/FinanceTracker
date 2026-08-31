@@ -1,7 +1,7 @@
 // Stat cards + category breakdowns + expense/income entry lists for a given period
 // (a month, a year, or a history group). Used by PeriodView and HistoryView.
 import { useMemo, useState } from "react";
-import { TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
+import { TrendingUp, TrendingDown, PiggyBank, Landmark } from "lucide-react";
 import {
   useCategories,
   useIncomeCategories,
@@ -33,6 +33,7 @@ export function PeriodPanel({
   incomes,
   budgets,
   showTrend = false,
+  bankBalance = null,
   userId,
 }: {
   title: string;
@@ -44,6 +45,9 @@ export function PeriodPanel({
   // True for a full-year period (Year tab / History "By year" groups) — shows the month-by-month
   // trend chart, which needs a full year of data to be meaningful.
   showTrend?: boolean;
+  // Real account balance from the bank (sum across connected accounts). Only passed on the
+  // current-month view — it's a "now" number, meaningless on year/history periods.
+  bankBalance?: number | null;
   userId: string;
 }) {
   const { data: categories = [] } = useCategories(userId);
@@ -89,7 +93,7 @@ export function PeriodPanel({
         <span className="text-xs text-muted-foreground">{expenses.length} entries</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 gap-4 ${bankBalance !== null ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
         <StatCard icon={<TrendingUp className="size-4" />} label="Income" value={income} tone="up" />
         <StatCard icon={<TrendingDown className="size-4" />} label="Total expenses" value={total} tone="down" />
         <StatCard
@@ -98,6 +102,14 @@ export function PeriodPanel({
           value={balance}
           tone={balance >= 0 ? "up" : "down"}
         />
+        {bankBalance !== null && (
+          <StatCard
+            icon={<Landmark className="size-4" />}
+            label="Bank balance"
+            value={bankBalance}
+            tone={bankBalance >= 0 ? "up" : "down"}
+          />
+        )}
       </div>
 
       {showTrend && <TrendChart expenses={expenses} incomes={incomes} categories={categories} />}

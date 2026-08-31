@@ -101,11 +101,34 @@ export async function syncAccount(supabase: any, conn: BankConnection, dateFrom:
     }
   }
 
+  // Also refresh the account's real balance; non-fatal if the bank doesn't return one.
+  let balance: number | null = null;
+  try {
+    balance = await fetchBalance(conn.account_uid);
+  } catch (err) {
+    console.error(`balance fetch failed for account ${conn.account_uid}:`, err);
+  }
+
   const { error } = await supabase
     .from("bank_connections")
-    .update({ last_synced_at: new Date().toISOString() })
+    .update({ last_synced_at: new Date().toISOString(), ...(balance !== null ? { balance } : {}) })
     .eq("id", conn.id);
   if (error) throw error;
 
   return rows.size;
+}
+
+// Prefer the "money usable right now" figure over accounting ones: interim available (ITAV),
+// then expected (XPCD), then closing booked (CLBD), then whatever the bank returned first.
+const BALANCE_TYPE_PRIORITY = ["ITAV", "XPCD", "CLBD"];
+
+async function fetchBalance(accountUid: string): Promise<number | null> {
+  const { balances } = await ebFetch(`/accounts/${accountUid}/balances`);
+  if (!balances?.length) return null;
+  const preferred =
+    BALANCE_TYPE_PRIORITY.map((t) => balances.find((b: { balance_type?: string }) => b.balance_type === t)).find(
+      Boolean
+    ) ?? balances[0];
+  const amount = parseFloat(preferred?.balance_amount?.amount ?? "");
+  return Number.isNaN(amount) ? null : amount;
 }

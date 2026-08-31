@@ -1,12 +1,13 @@
 // "Month"/"Year" tab: filters expenses/incomes for the current month or year and renders PeriodPanel.
 import { useMemo } from "react";
-import { useExpenses, useIncomes, useBudgets } from "@/lib/finance-data";
+import { useExpenses, useIncomes, useBudgets, useBankConnections } from "@/lib/finance-data";
 import { PeriodPanel } from "@/components/PeriodPanel";
 
 export function PeriodView({ mode, userId }: { mode: "month" | "year"; userId: string }) {
   const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
   const { data: incomesAll = [], isLoading: incomesLoading } = useIncomes(userId);
   const { data: budgetsAll = [], isLoading: budgetsLoading } = useBudgets(userId);
+  const { data: bankConnections = [] } = useBankConnections(userId);
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -34,6 +35,14 @@ export function PeriodView({ mode, userId }: { mode: "month" | "year"; userId: s
     return <p className="text-sm text-muted-foreground">Loading...</p>;
   }
 
+  // Real balance straight from the bank — a "now" number, so it only belongs on the current
+  // month view, not on year/history periods. Null when no account has reported one yet.
+  const withBalance = bankConnections.filter((c) => c.balance !== null);
+  const bankBalance =
+    mode === "month" && withBalance.length > 0
+      ? withBalance.reduce((sum, c) => sum + (c.balance ?? 0), 0)
+      : null;
+
   return (
     <PeriodPanel
       title={label}
@@ -41,6 +50,7 @@ export function PeriodView({ mode, userId }: { mode: "month" | "year"; userId: s
       incomes={incomes}
       budgets={budgets}
       showTrend={mode === "year"}
+      bankBalance={bankBalance}
       userId={userId}
     />
   );

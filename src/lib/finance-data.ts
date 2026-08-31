@@ -471,6 +471,7 @@ export type BankConnection = {
   account_name: string;
   valid_until: string; // ISO — consent expiry; the user must re-authorize at the bank after this
   last_synced_at: string | null;
+  balance: number | null; // real balance reported by the bank, refreshed on every sync
 };
 
 export function useBankConnections(userId: string | undefined) {
@@ -479,7 +480,7 @@ export function useBankConnections(userId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bank_connections")
-        .select("id, account_name, valid_until, last_synced_at")
+        .select("id, account_name, valid_until, last_synced_at, balance")
         .order("created_at");
       if (error) throw error;
       return data as BankConnection[];

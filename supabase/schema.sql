@@ -263,6 +263,10 @@ drop policy if exists "bank_connections_delete_own" on public.bank_connections;
 create policy "bank_connections_delete_own" on public.bank_connections
   for delete using (auth.uid() = user_id);
 
+-- Latest real balance reported by the bank for the connected account, refreshed on every sync
+-- (last_synced_at doubles as its timestamp). Null until the first successful balance fetch.
+alter table public.bank_connections add column if not exists balance double precision;
+
 -- Marks rows imported from the bank (mirrors the recurring_*_id pattern). The unique indexes are
 -- what makes re-syncing overlapping date windows idempotent (ON CONFLICT DO NOTHING); manual rows
 -- keep a null id, and nulls never conflict with each other.
