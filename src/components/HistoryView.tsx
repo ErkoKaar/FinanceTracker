@@ -134,7 +134,7 @@ export function HistoryView({ userId }: { userId: string }) {
                   <span className="hidden text-primary sm:inline" title="Income">
                     +<Money value={incomeTotal} centsClassName="hidden" />
                   </span>
-                  <Money value={-total} className="text-spend" centsClassName="text-[0.62em] text-spend/60" />
+                  <Money value={-total} className="text-spend" />
                   <ChevronDown
                     className={`size-4 text-muted-foreground transition-transform duration-200 ease-in-out motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`}
                     aria-hidden

@@ -223,6 +223,78 @@ export function useAddBudget(userId: string | undefined) {
   });
 }
 
+// Copies plan lines into another month in one insert (Plan → Budget "Copy last month's plan").
+export function useCopyBudgets(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (lines: Omit<Budget, "id">[]) => {
+      if (lines.length === 0) return;
+      const { error } = await supabase.from("budgets").insert(lines.map((l) => ({ user_id: userId, ...l })));
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["budgets", userId] }),
+  });
+}
+
+export type IncomePlan = {
+  id: string;
+  year: number;
+  month: number; // 1-12
+  name: string;
+  amount: number;
+};
+
+// Expected income lines per month (Plan → Budget), the "+" side of the plan calculation.
+export function useIncomePlans(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["income_plans", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("income_plans")
+        .select("id, year, month, name, amount")
+        .order("created_at");
+      if (error) throw error;
+      return data as IncomePlan[];
+    },
+    enabled: !!userId,
+  });
+}
+
+// Inserts one or more lines (a single add, "use recurring income", or copying last month).
+export function useAddIncomePlans(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (lines: Omit<IncomePlan, "id">[]) => {
+      if (lines.length === 0) return;
+      const { error } = await supabase.from("income_plans").insert(lines.map((l) => ({ user_id: userId, ...l })));
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["income_plans", userId] }),
+  });
+}
+
+export function useUpdateIncomePlan(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; name: string; amount: number }) => {
+      const { error } = await supabase.from("income_plans").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["income_plans", userId] }),
+  });
+}
+
+export function useDeleteIncomePlan(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("income_plans").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["income_plans", userId] }),
+  });
+}
+
 export function useUpdateBudget(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({

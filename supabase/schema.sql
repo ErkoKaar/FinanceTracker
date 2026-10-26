@@ -316,3 +316,21 @@ create policy "wishlist_items_all_own" on public.wishlist_items
 -- have no name; the app shows their category as the name.
 alter table public.budgets add column if not exists name text;
 alter table public.budgets drop constraint if exists budgets_user_id_year_month_category_key;
+
+-- Expected income per month (Plan tab → Budget): named lines like "Salary" or "Freelance". The Plan
+-- tab subtracts the month's planned spending from their sum to show what's left after the plan.
+create table if not exists public.income_plans (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  year integer not null,
+  month integer not null check (month between 1 and 12),
+  name text not null check (length(trim(name)) > 0),
+  amount double precision not null check (amount > 0),
+  created_at timestamptz not null default now()
+);
+
+alter table public.income_plans enable row level security;
+
+drop policy if exists "income_plans_all_own" on public.income_plans;
+create policy "income_plans_all_own" on public.income_plans
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

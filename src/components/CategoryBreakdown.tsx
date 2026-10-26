@@ -108,11 +108,11 @@ export function CategoryBreakdown({
                     <p className={`mt-1.5 text-xs ${over ? "text-destructive" : "text-muted-foreground"}`}>
                       {over ? (
                         <>
-                          <Money value={c.value - plan} centsClassName="" /> over plan
+                          <Money value={c.value - plan} /> over plan
                         </>
                       ) : (
                         <>
-                          <Money value={plan - c.value} centsClassName="" /> left
+                          <Money value={plan - c.value} /> left
                         </>
                       )}
                     </p>

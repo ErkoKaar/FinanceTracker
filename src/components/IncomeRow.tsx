@@ -88,7 +88,7 @@ export function IncomeRow({
         </div>
       </div>
       <span className="money text-sm text-primary">
-        +<Money value={income.amount} centsClassName="text-[0.62em] text-primary/70" />
+        +<Money value={income.amount} />
       </span>
       <div className={rowActions}>
         <button onClick={startEdit} className={rowIconButton} aria-label={`Edit ${income.description}`}>

@@ -77,7 +77,7 @@ export function WishlistView({ userId }: { userId: string }) {
         <div className="rise flex flex-wrap items-end gap-x-10 gap-y-3" style={{ ["--delay" as string]: "80ms" }}>
           <div>
             <p className="text-sm text-muted-foreground">On your wishlist</p>
-            <RollingMoney value={total} className="mt-1 block text-5xl font-medium leading-none tracking-[-0.04em] text-wish" centsClassName="text-[0.5em] text-wish/60" />
+            <RollingMoney value={total} className="mt-1 block text-5xl font-medium leading-none tracking-[-0.04em] text-wish" />
           </div>
           <p className="pb-1 text-sm text-muted-foreground">
             <Money value={balance} className={balance < 0 ? "text-destructive" : "text-foreground"} /> left this month

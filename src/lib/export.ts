@@ -11,6 +11,7 @@ export async function exportAllData() {
     "recurring_expenses",
     "recurring_incomes",
     "budgets",
+    "income_plans",
     "wishlist_items",
   ] as const;
 

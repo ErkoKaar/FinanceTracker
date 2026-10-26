@@ -52,7 +52,7 @@ export function SummaryCards({
   return (
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)]">
       <Card kind="income" label="Income">
-        <Money value={income} className={`${bigNumber} ${KIND.income.text}`} centsClassName="text-[0.5em] text-primary/60" />
+        <Money value={income} className={`${bigNumber} ${KIND.income.text}`} />
         {incomeByCategory.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">No income recorded yet.</p>
         ) : (
@@ -68,14 +68,14 @@ export function SummaryCards({
       </Card>
 
       <Card kind="spend" label="Spent">
-        <Money value={spent} className={`${bigNumber} ${KIND.spend.text}`} centsClassName="text-[0.5em] text-spend/60" />
+        <Money value={spent} className={`${bigNumber} ${KIND.spend.text}`} />
         <p className="mt-3 text-sm text-muted-foreground">
           {expenseCount} {expenseCount === 1 ? "expense" : "expenses"}
           {overPlan && overPlan.categories > 0 && (
             <span className="mt-1 flex items-center gap-1.5 text-destructive">
               <AlertTriangle className="size-3.5 shrink-0" />
               <span>
-                <Money value={overPlan.amount} centsClassName="" /> over plan in {overPlan.categories}{" "}
+                <Money value={overPlan.amount} /> over plan in {overPlan.categories}{" "}
                 {overPlan.categories === 1 ? "category" : "categories"}
               </span>
             </span>
@@ -94,7 +94,7 @@ export function SummaryCards({
       </Card>
 
       <Card kind="neutral" label={current ? (scope === "month" ? "Left this month" : "Left this year") : "Left over"}>
-        <RollingMoney value={balance} className={`${bigNumber} ${balance < 0 ? "text-destructive" : ""}`} centsClassName="text-[0.5em] text-muted-foreground" />
+        <RollingMoney value={balance} className={`${bigNumber} ${balance < 0 ? "text-destructive" : ""}`} />
         <p className="mt-3 text-sm text-muted-foreground">Income minus spending</p>
         {bankBalance !== null && (
           <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4 text-sm">

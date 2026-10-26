@@ -1,5 +1,6 @@
-// Euro amount in the app's money style: mono tabular digits, a real minus sign, and the cents set
-// smaller and quieter so the whole euros carry the reading. RollingMoney animates (readouts only).
+// Euro amount in the app's money style: mono tabular digits and a real minus sign, cents at the same
+// size and colour as the euros so every figure reads in one glance. `centsClassName="hidden"` shows
+// whole euros only (rounded summaries). RollingMoney animates (readouts only).
 import { useCountUp } from "@/lib/use-count-up";
 
 const whole = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
@@ -25,7 +26,7 @@ type MoneyProps = {
   centsClassName?: string;
 };
 
-function MoneyText({ shown, label, className = "", centsClassName = "text-[0.62em] text-muted-foreground" }: {
+function MoneyText({ shown, label, className = "", centsClassName = "" }: {
   shown: number;
   label: number;
   className?: string;
@@ -37,7 +38,7 @@ function MoneyText({ shown, label, className = "", centsClassName = "text-[0.62e
       <span className="sr-only">{formatEuro(label)}</span>
       <span aria-hidden>
         {negative && "−"}€{euros}
-        <span className={centsClassName}>.{cents}</span>
+        <span className={centsClassName || undefined}>.{cents}</span>
       </span>
     </span>
   );
