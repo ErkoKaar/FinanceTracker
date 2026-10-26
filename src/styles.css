@@ -1,4 +1,9 @@
-/* Global stylesheet: Tailwind v4 entry point plus the app's CSS-variable theme (colors, radii). */
+/* Global stylesheet: self-hosted fonts, Tailwind v4 entry point, the app's CSS-variable theme, and the
+   few hand-written pieces Tailwind can't express (glass panels, aurora backdrop, entrance motion). */
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+/* opsz build: large page titles get Bricolage's display optical size automatically. */
+@import "@fontsource-variable/bricolage-grotesque/opsz.css";
 @import "tailwindcss" source(none);
 @source "../src";
 
@@ -26,6 +31,9 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-gold: var(--gold);
+  --color-spend: var(--spend);
+  --color-wish: var(--wish);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -35,55 +43,138 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --font-display: "Bricolage Grotesque Variable", "Geist Variable", ui-sans-serif, sans-serif;
+  /* Strong curves (Emil Kowalski): ease-out for enter/exit and feedback, ease-in-out for things
+     moving on screen (tab indicators, switches). Overrides Tailwind's weaker built-ins. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --default-transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 :root {
   --radius: 0.75rem;
-  /* Dark minimal — near-black with soft mint accent */
-  --background: oklch(0.16 0.005 260);
-  --foreground: oklch(0.96 0.005 260);
-  --card: oklch(0.20 0.006 260);
-  --card-foreground: oklch(0.96 0.005 260);
-  --popover: oklch(0.20 0.006 260);
-  --popover-foreground: oklch(0.96 0.005 260);
+  /* Pine night: a green-leaning near-black so the mint (income, primary) and gold (plan, today)
+     from the logo read as part of the same world rather than stickers on grey. */
+  --background: oklch(0.155 0.012 170);
+  --foreground: oklch(0.95 0.008 165);
+  --card: oklch(0.19 0.012 170);
+  --card-foreground: oklch(0.95 0.008 165);
+  --popover: oklch(0.2 0.013 170);
+  --popover-foreground: oklch(0.95 0.008 165);
   --primary: oklch(0.86 0.14 165);
-  --primary-foreground: oklch(0.18 0.01 260);
-  --secondary: oklch(0.26 0.008 260);
-  --secondary-foreground: oklch(0.96 0.005 260);
-  --muted: oklch(0.24 0.006 260);
-  --muted-foreground: oklch(0.68 0.015 260);
-  --accent: oklch(0.28 0.01 260);
-  --accent-foreground: oklch(0.96 0.005 260);
-  --destructive: oklch(0.65 0.20 25);
-  --destructive-foreground: oklch(0.98 0.005 260);
-  --border: oklch(0.28 0.008 260);
-  --input: oklch(0.26 0.008 260);
+  --primary-foreground: oklch(0.2 0.03 170);
+  --secondary: oklch(0.24 0.014 170);
+  --secondary-foreground: oklch(0.95 0.008 165);
+  --muted: oklch(0.22 0.012 170);
+  --muted-foreground: oklch(0.7 0.018 165);
+  --accent: oklch(0.27 0.016 170);
+  --accent-foreground: oklch(0.95 0.008 165);
+  /* Coral, reserved for "over plan" and negative balances, nothing else. */
+  --destructive: oklch(0.71 0.16 28);
+  --destructive-foreground: oklch(0.98 0.005 165);
+  /* One colour per kind of information, used the same way everywhere (icon chips, key figures,
+     chart series): mint = income, sky = spending, gold = plan/budget, violet = wishlist. */
+  --gold: oklch(0.84 0.14 84);
+  --spend: oklch(0.78 0.11 232);
+  --wish: oklch(0.78 0.12 300);
+  --border: oklch(1 0 0 / 0.08);
+  --input: oklch(0.13 0.012 170 / 0.7);
   --ring: oklch(0.86 0.14 165);
   --chart-1: oklch(0.86 0.14 165);
-  --chart-2: oklch(0.75 0.15 220);
-  --chart-3: oklch(0.78 0.17 60);
-  --chart-4: oklch(0.72 0.18 330);
-  --chart-5: oklch(0.80 0.16 290);
-}
-
-.dark {
-  --background: oklch(0.16 0.005 260);
-  --foreground: oklch(0.96 0.005 260);
+  --chart-2: oklch(0.78 0.11 232);
+  --chart-3: oklch(0.84 0.14 84);
+  --chart-4: oklch(0.72 0.15 330);
+  --chart-5: oklch(0.78 0.12 290);
+  color-scheme: dark;
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-feature-settings: "ss01", "cv11";
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
     /* Backs up the viewport meta tag's zoom lock — also blocks double-tap-to-zoom on browsers
        that don't fully honor user-scalable=no. */
     touch-action: manipulation;
     /* Safety net against any one element (long email, long description, ...) pushing the whole
        page wider than the viewport on mobile. */
     overflow-x: hidden;
+  }
+  ::selection {
+    background-color: oklch(0.86 0.14 165 / 0.3);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+  /* Native number-ish inputs and selects inherit the dark scheme instead of flashing white. */
+  select option {
+    background-color: var(--color-popover);
+  }
+}
+
+@layer components {
+  /* Fixed backdrop behind every screen: two soft glows in the logo's mint and gold, sitting high so
+     the readout area is lit and the lists below stay calm. Fixed, so the glass panels blur it. */
+  .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60rem 28rem at 12% -6rem, oklch(0.86 0.14 165 / 0.13), transparent 70%),
+      radial-gradient(44rem 22rem at 92% -4rem, oklch(0.84 0.14 84 / 0.09), transparent 70%),
+      var(--color-background);
+  }
+
+  /* Frosted panel for lists and forms (a web approximation of glass, not an Apple material): a lit
+     top edge and a hairline inner border instead of a drop shadow. */
+  .glass {
+    background:
+      linear-gradient(180deg, oklch(1 0 0 / 0.045), oklch(1 0 0 / 0.015) 40%, transparent),
+      oklch(0.17 0.012 170 / 0.62);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    backdrop-filter: blur(24px) saturate(140%);
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.07),
+      inset 0 0 0 1px oklch(1 0 0 / 0.05),
+      0 24px 48px -32px oklch(0.05 0.02 170 / 0.8);
+  }
+
+  .glass-bar {
+    background: oklch(0.15 0.012 170 / 0.72);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    backdrop-filter: blur(20px) saturate(150%);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass,
+    .glass-bar {
+      background: var(--color-card);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* Money: tabular mono digits everywhere a euro amount appears, so columns line up. */
+  .money {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.035em;
+    line-height: 0.95;
   }
 }
 
@@ -104,8 +195,57 @@
   }
 }
 
+/* Tab content settling in. Tabs switch tens of times a day, so this stays short and small: it only
+   keeps the swap from feeling like a hard cut. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.rise {
+  animation: rise 240ms var(--ease-out) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+/* The one orchestrated moment: the first DayStrip of a session grows in from the baseline, left to
+   right, like the month filling in. DayStrip only adds this class once per session. */
+@keyframes grow-up {
+  from {
+    transform: scaleY(0.04);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.bar-grow {
+  transform-origin: bottom;
+  animation: grow-up 420ms var(--ease-out) both;
+  animation-delay: calc(80ms + var(--i, 0) * 12ms);
+}
+
+/* Reduced motion: no movement, but keep the gentle fades that explain what changed. */
 @media (prefers-reduced-motion: reduce) {
-  .logo-glow {
+  .logo-glow,
+  .bar-grow {
     animation: none;
+  }
+  .rise {
+    animation: fade-in 200ms ease both;
   }
 }

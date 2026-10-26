@@ -1,8 +1,11 @@
-// A single row in PeriodPanel's "Income" list — view mode, or inline edit (amount/description/category).
+// A single income row in the Transactions list — view mode, or inline edit (amount/description/category).
 // Mirrors ExpenseRow.
 import { useState } from "react";
-import { Pencil, Check, X, Trash2 } from "lucide-react";
+import { Pencil, Check, X, Trash2, Repeat } from "lucide-react";
 import type { Income } from "@/lib/finance-data";
+import { Money } from "@/components/Money";
+import { IconChip } from "@/components/Zone";
+import { fieldSm, rowActions, rowIconButton } from "@/lib/ui";
 
 export function IncomeRow({
   income,
@@ -36,56 +39,67 @@ export function IncomeRow({
 
   if (editing) {
     return (
-      <li className="px-5 py-3 border-t border-border first:border-t-0 flex items-center gap-2 text-sm">
+      <li className="flex flex-wrap items-center gap-2 bg-foreground/[0.03] px-5 py-3">
         <input
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           inputMode="decimal"
-          className="w-20 bg-input border border-border rounded-md px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/50"
+          aria-label="Amount"
+          className={`${fieldSm} money w-24`}
         />
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="flex-1 bg-input border border-border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+          aria-label="Description"
+          className={`${fieldSm} min-w-[8rem] flex-1`}
         />
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="bg-input border border-border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+          aria-label="Category"
+          className={`${fieldSm} max-w-full`}
         >
           {categories.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <button onClick={save} className="text-muted-foreground hover:text-primary transition" aria-label="Save">
-          <Check className="size-4" />
-        </button>
-        <button
-          onClick={() => setEditing(false)}
-          className="text-muted-foreground hover:text-foreground transition"
-          aria-label="Cancel"
-        >
-          <X className="size-4" />
-        </button>
+        <div className="ml-auto flex items-center">
+          <button onClick={save} className={`${rowIconButton} hover:text-primary`} aria-label="Save">
+            <Check className="size-4" />
+          </button>
+          <button onClick={() => setEditing(false)} className={rowIconButton} aria-label="Cancel">
+            <X className="size-4" />
+          </button>
+        </div>
       </li>
     );
   }
 
   return (
-    <li className="px-5 py-3 border-t border-border first:border-t-0 flex items-center justify-between text-sm">
-      <div>
-        <div>{income.description}</div>
-        <div className="text-xs text-muted-foreground">
-          {income.category} · {new Date(income.date).toLocaleDateString("en-GB")}
+    <li className="group flex items-center gap-3 px-5 py-2.5">
+      <IconChip kind="income" size="sm" />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm">{income.description}</div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="truncate">{income.category}</span>
+          {income.recurring_income_id && (
+            <Repeat className="size-3 shrink-0" aria-label="Recurring" />
+          )}
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="tabular-nums">€{income.amount.toFixed(2)}</span>
-        <button onClick={startEdit} className="text-muted-foreground hover:text-foreground transition" aria-label="Edit">
-          <Pencil className="size-4" />
+      <span className="money text-sm text-primary">
+        +<Money value={income.amount} centsClassName="text-[0.62em] text-primary/70" />
+      </span>
+      <div className={rowActions}>
+        <button onClick={startEdit} className={rowIconButton} aria-label={`Edit ${income.description}`}>
+          <Pencil className="size-3.5" />
         </button>
-        <button onClick={onDelete} className="text-muted-foreground hover:text-destructive transition" aria-label="Delete">
-          <Trash2 className="size-4" />
+        <button
+          onClick={onDelete}
+          className={`${rowIconButton} hover:text-destructive`}
+          aria-label={`Delete ${income.description}`}
+        >
+          <Trash2 className="size-3.5" />
         </button>
       </div>
     </li>

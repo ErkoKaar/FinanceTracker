@@ -12,7 +12,10 @@ export const Route = createFileRoute("/")({
 
 function FullScreenMessage({ text }: { text: string }) {
   return (
-    <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">{text}</div>
+    <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">
+      <div className="aurora" aria-hidden />
+      {text}
+    </div>
   );
 }
 

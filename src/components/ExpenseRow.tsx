@@ -1,7 +1,11 @@
-// A single row in PeriodPanel's "Entries" list — view mode, or inline edit (amount/description/category).
+// A single expense row in the Transactions list — view mode, or inline edit (amount/description/category).
+// The date is the day heading above the row, so the row itself shows only what and how much.
 import { useState } from "react";
-import { Pencil, Check, X, Trash2 } from "lucide-react";
+import { Pencil, Check, X, Trash2, Repeat } from "lucide-react";
 import type { Expense } from "@/lib/finance-data";
+import { Money } from "@/components/Money";
+import { IconChip } from "@/components/Zone";
+import { fieldSm, rowActions, rowIconButton } from "@/lib/ui";
 
 export function ExpenseRow({
   expense,
@@ -35,56 +39,65 @@ export function ExpenseRow({
 
   if (editing) {
     return (
-      <li className="px-5 py-3 border-t border-border first:border-t-0 flex items-center gap-2 text-sm">
+      <li className="flex flex-wrap items-center gap-2 bg-foreground/[0.03] px-5 py-3">
         <input
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           inputMode="decimal"
-          className="w-20 bg-input border border-border rounded-md px-2 py-1 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring/50"
+          aria-label="Amount"
+          className={`${fieldSm} money w-24`}
         />
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="flex-1 bg-input border border-border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+          aria-label="Description"
+          className={`${fieldSm} min-w-[8rem] flex-1`}
         />
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="bg-input border border-border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+          aria-label="Category"
+          className={`${fieldSm} max-w-full`}
         >
           {categories.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <button onClick={save} className="text-muted-foreground hover:text-primary transition" aria-label="Save">
-          <Check className="size-4" />
-        </button>
-        <button
-          onClick={() => setEditing(false)}
-          className="text-muted-foreground hover:text-foreground transition"
-          aria-label="Cancel"
-        >
-          <X className="size-4" />
-        </button>
+        <div className="ml-auto flex items-center">
+          <button onClick={save} className={`${rowIconButton} hover:text-primary`} aria-label="Save">
+            <Check className="size-4" />
+          </button>
+          <button onClick={() => setEditing(false)} className={rowIconButton} aria-label="Cancel">
+            <X className="size-4" />
+          </button>
+        </div>
       </li>
     );
   }
 
   return (
-    <li className="px-5 py-3 border-t border-border first:border-t-0 flex items-center justify-between text-sm">
-      <div>
-        <div>{expense.description}</div>
-        <div className="text-xs text-muted-foreground">
-          {expense.category} · {new Date(expense.date).toLocaleDateString("en-GB")}
+    <li className="group flex items-center gap-3 px-5 py-2.5">
+      <IconChip kind="spend" size="sm" />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm">{expense.description}</div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="truncate">{expense.category}</span>
+          {expense.recurring_expense_id && (
+            <Repeat className="size-3 shrink-0" aria-label="Recurring" />
+          )}
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="tabular-nums">€{expense.amount.toFixed(2)}</span>
-        <button onClick={startEdit} className="text-muted-foreground hover:text-foreground transition" aria-label="Edit">
-          <Pencil className="size-4" />
+      <Money value={-expense.amount} className="text-sm" />
+      <div className={rowActions}>
+        <button onClick={startEdit} className={rowIconButton} aria-label={`Edit ${expense.description}`}>
+          <Pencil className="size-3.5" />
         </button>
-        <button onClick={onDelete} className="text-muted-foreground hover:text-destructive transition" aria-label="Delete">
-          <Trash2 className="size-4" />
+        <button
+          onClick={onDelete}
+          className={`${rowIconButton} hover:text-destructive`}
+          aria-label={`Delete ${expense.description}`}
+        >
+          <Trash2 className="size-3.5" />
         </button>
       </div>
     </li>

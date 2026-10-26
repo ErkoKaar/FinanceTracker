@@ -29,8 +29,8 @@ export default defineConfig({
         name: "FinanceTracker",
         short_name: "FinanceTracker",
         description: "A minimal dark finance tracker for tracking expenses and income.",
-        theme_color: "#0d0e10",
-        background_color: "#0d0e10",
+        theme_color: "#070e0b",
+        background_color: "#070e0b",
         display: "standalone",
         icons: [
           { src: "/icon-192-v2.png", sizes: "192x192", type: "image/png" },

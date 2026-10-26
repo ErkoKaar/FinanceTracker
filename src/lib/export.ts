@@ -11,6 +11,7 @@ export async function exportAllData() {
     "recurring_expenses",
     "recurring_incomes",
     "budgets",
+    "wishlist_items",
   ] as const;
 
   const results = await Promise.all(

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import logo from "@/assets/finance-tracker-logo-transparent.png";
+import { field, primaryButton } from "@/lib/ui";
 
 export function Login({
   signIn,
@@ -34,43 +35,58 @@ export function Login({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-[radial-gradient(ellipse_at_top,_oklch(0.22_0.02_165_/_0.4),_transparent_60%)]">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-10">
-          <img src={logo} alt="FinanceTracker logo" className="size-48 mb-4" />
-          <h1 className="text-2xl font-semibold tracking-tight">FinanceTracker</h1>
-          <p className="text-xs text-muted-foreground mt-1">Personal finance tracker</p>
+    <div className="flex min-h-dvh items-center px-4 py-12">
+      <div className="aurora" aria-hidden />
+      <div className="rise mx-auto grid w-full max-w-4xl items-center gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:gap-16">
+        <div className="flex flex-col items-center text-center md:items-start md:text-left">
+          <img src={logo} alt="" className="logo-glow size-24 md:size-32" />
+          <h1 className="display mt-6 text-[clamp(2.75rem,8vw,4.5rem)] font-bold">FinanceTracker</h1>
+          <p className="mt-3 max-w-[32ch] text-sm text-muted-foreground">
+            Track what you spend and earn, plan each month, and see where the money went.
+          </p>
         </div>
 
-        <form onSubmit={submit} className="bg-card border border-border rounded-2xl p-6 space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Email</label>
+        <form onSubmit={submit} className="glass space-y-4 rounded-[20px] p-6">
+          <div className="space-y-2">
+            <label htmlFor="login-email" className="text-xs text-muted-foreground">
+              Email
+            </label>
             <input
+              id="login-email"
               autoFocus
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="e.g. mari@example.com"
-              className="w-full bg-input border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+              className={`${field} w-full`}
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Password</label>
+          <div className="space-y-2">
+            <label htmlFor="login-password" className="text-xs text-muted-foreground">
+              Password
+            </label>
             <input
+              id="login-password"
               type="password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-input border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+              className={`${field} w-full`}
             />
           </div>
-          {error && <p className="text-xs text-destructive">{error}</p>}
-          {info && <p className="text-xs text-primary">{info}</p>}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 text-sm font-medium hover:opacity-90 transition disabled:opacity-60"
-          >
+          {error && (
+            <p role="alert" className="text-xs text-destructive">
+              {error}
+            </p>
+          )}
+          {info && (
+            <p role="status" className="text-xs text-primary">
+              {info}
+            </p>
+          )}
+          <button type="submit" disabled={submitting} className={`${primaryButton} w-full`}>
             {mode === "login" ? "Log in" : "Sign up"}
           </button>
           <button
@@ -80,7 +96,7 @@ export function Login({
               setError(null);
               setInfo(null);
             }}
-            className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition"
+            className="block w-full py-1 text-center text-xs text-muted-foreground transition hover:text-foreground"
           >
             {mode === "login" ? "Don't have an account? Sign up" : "Already have an account? Log in"}
           </button>

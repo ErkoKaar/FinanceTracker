@@ -291,3 +291,28 @@ select cron.schedule(
   );
   $$
 );
+
+-- Things the user wants to buy later (Plan tab → Wishlist). "Bought" adds a real expense and stamps
+-- bought_at, so the item leaves the open list but stays visible under "Bought".
+create table if not exists public.wishlist_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null check (length(trim(name)) > 0),
+  price double precision not null check (price > 0),
+  url text,
+  bought_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table public.wishlist_items enable row level security;
+
+drop policy if exists "wishlist_items_all_own" on public.wishlist_items;
+create policy "wishlist_items_all_own" on public.wishlist_items
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Named plan lines (Plan tab → Budget): a budget row is now "name + amount + category", and one
+-- category can hold several lines (e.g. "Groceries" and "Eating out" both under Food). The Month view
+-- still compares spending per category, summing that category's lines. Rows from before this change
+-- have no name; the app shows their category as the name.
+alter table public.budgets add column if not exists name text;
+alter table public.budgets drop constraint if exists budgets_user_id_year_month_category_key;

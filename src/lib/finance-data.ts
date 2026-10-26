@@ -19,6 +19,7 @@ export type Budget = {
   month: number; // 1-12
   category: string;
   amount: number;
+  name: string | null; // null on rows created before plan lines had names; shown as the category
 };
 
 export type RecurringExpense = {
@@ -194,13 +195,16 @@ export function useDeleteExpense(userId: string | undefined) {
   });
 }
 
-// How much the user plans to spend per category each month — powers the "Plan" tab and the
-// Planned/Remaining columns on the Month view's expense breakdown. One row per category per month.
+// Named plan lines per month — powers the "Plan" tab and the plan comparison on the Month view
+// (which sums a category's lines). A category can have several lines in the same month.
 export function useBudgets(userId: string | undefined) {
   return useQuery({
     queryKey: ["budgets", userId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("budgets").select("id, year, month, category, amount");
+      const { data, error } = await supabase
+        .from("budgets")
+        .select("id, year, month, category, amount, name")
+        .order("created_at");
       if (error) throw error;
       return data as Budget[];
     },
@@ -208,14 +212,22 @@ export function useBudgets(userId: string | undefined) {
   });
 }
 
-// Upsert: setting a budget for a category that already has one this month just updates it.
-export function useSetBudget(userId: string | undefined) {
+export function useAddBudget(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (budget: Omit<Budget, "id">) => {
-      const { error } = await supabase
-        .from("budgets")
-        .upsert({ user_id: userId, ...budget }, { onConflict: "user_id,year,month,category" });
+      const { error } = await supabase.from("budgets").insert({ user_id: userId, ...budget });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["budgets", userId] }),
+  });
+}
+
+export function useUpdateBudget(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; name: string; amount: number; category: string }) => {
+      const { error } = await supabase.from("budgets").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["budgets", userId] }),
@@ -440,5 +452,85 @@ export function useDisconnectBank(userId: string | undefined) {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bank_connections", userId] }),
+  });
+}
+
+export type WishlistItem = {
+  id: string;
+  name: string;
+  price: number;
+  url: string | null;
+  bought_at: string | null; // ISO; null = still wanted
+  created_at: string;
+};
+
+// Wishlist (Plan tab → Wishlist). Open and bought items come back together; the UI splits them.
+export function useWishlist(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["wishlist_items", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wishlist_items")
+        .select("id, name, price, url, bought_at, created_at")
+        .order("created_at");
+      if (error) throw error;
+      return data as WishlistItem[];
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useAddWishlistItem(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (item: { name: string; price: number; url: string | null }) => {
+      const { error } = await supabase.from("wishlist_items").insert({ user_id: userId, ...item });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wishlist_items", userId] }),
+  });
+}
+
+export function useUpdateWishlistItem(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; price?: number; url?: string | null }) => {
+      const { error } = await supabase.from("wishlist_items").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wishlist_items", userId] }),
+  });
+}
+
+export function useDeleteWishlistItem(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("wishlist_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wishlist_items", userId] }),
+  });
+}
+
+// "Bought": records the purchase as a normal expense, then marks the item bought. Two writes, not a
+// transaction — the expense goes first so a failure never leaves an item marked bought with no
+// expense behind it; if only the second write fails, the error says so instead of retrying blindly.
+export function useBuyWishlistItem(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ item, category }: { item: WishlistItem; category: string }) => {
+      const now = new Date().toISOString();
+      const { error: expenseError } = await supabase
+        .from("expenses")
+        .insert({ user_id: userId, amount: item.price, description: item.name, category, date: now });
+      if (expenseError) throw expenseError;
+      const { error } = await supabase.from("wishlist_items").update({ bought_at: now }).eq("id", item.id);
+      if (error) throw new Error(`The expense was added, but "${item.name}" couldn't be marked as bought.`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["expenses", userId] });
+      queryClient.invalidateQueries({ queryKey: ["wishlist_items", userId] });
+    },
   });
 }

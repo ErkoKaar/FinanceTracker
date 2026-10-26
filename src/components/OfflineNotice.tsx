@@ -4,12 +4,13 @@ import { WifiOff } from "lucide-react";
 
 export function OfflineNotice() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="flex min-h-dvh items-center justify-center px-4">
+      <div className="aurora" aria-hidden />
       <div className="max-w-sm text-center">
-        <div className="size-14 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mb-4 mx-auto">
-          <WifiOff className="size-7 text-destructive" strokeWidth={1.8} />
+        <div className="glass mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl">
+          <WifiOff className="size-6 text-muted-foreground" strokeWidth={1.8} />
         </div>
-        <h1 className="text-xl font-semibold tracking-tight">You're offline</h1>
+        <h1 className="display text-4xl font-bold">You're offline</h1>
         <p className="text-sm text-muted-foreground mt-2">
           FinanceTracker needs an internet connection to load and save your data. Please reconnect and try again.
         </p>

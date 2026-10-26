@@ -1,41 +1,39 @@
-// Logged-in app shell: header/tabs/sign-out, switches between the Add/Recurring/Month/Plan/Year/History tabs.
-// The desktop nav groups tabs into two "Manage"/"Review" dropdowns; below the `md` breakpoint it
-// collapses into a single full-width dropdown with the same two groups as labeled sections.
-import { useEffect, useRef, useState } from "react";
-import { LogOut, Bell, BellOff, Download, Landmark, Menu, X, ChevronDown } from "lucide-react";
+// Logged-in app shell: header with account actions, and the five destinations, each with one job:
+// Overview (this month), History (past months and years), Add, Plan (budget + recurring), Wishlist.
+// Desktop shows them as a pill tab row in the header with Add as the primary button; below `md` they
+// move into a bottom tab bar with Add as the raised centre button, thumb-reachable in the PWA.
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  LogOut,
+  Bell,
+  BellOff,
+  Download,
+  Landmark,
+  Plus,
+  LayoutGrid,
+  History,
+  Target,
+  Gift,
+  type LucideIcon,
+} from "lucide-react";
 import { useApplyRecurring, useBankConnections, useDisconnectBank } from "@/lib/finance-data";
 import { isPushSupported, getPushSubscriptionStatus, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { startBankAuth } from "@/lib/bank";
 import { exportAllData } from "@/lib/export";
 import { AddView } from "@/components/AddView";
-import { RecurringView } from "@/components/RecurringView";
 import { PeriodView } from "@/components/PeriodView";
 import { PlanView } from "@/components/PlanView";
+import { WishlistView } from "@/components/WishlistView";
 import { HistoryView } from "@/components/HistoryView";
 import logo from "@/assets/finance-tracker-logo-transparent.png";
 
-type Tab = "add" | "recurring" | "month" | "plan" | "year" | "history";
-type GroupId = "manage" | "review";
+type Tab = "add" | "overview" | "history" | "plan" | "wishlist";
 
-const TAB_GROUPS: { id: GroupId; label: string; tabs: [Tab, string][] }[] = [
-  {
-    id: "manage",
-    label: "Manage",
-    tabs: [
-      ["add", "Add"],
-      ["recurring", "Recurring"],
-      ["plan", "Plan"],
-    ],
-  },
-  {
-    id: "review",
-    label: "Review",
-    tabs: [
-      ["month", "Month"],
-      ["year", "Year"],
-      ["history", "History"],
-    ],
-  },
+const NAV: { id: Exclude<Tab, "add">; label: string; icon: LucideIcon }[] = [
+  { id: "overview", label: "Overview", icon: LayoutGrid },
+  { id: "history", label: "History", icon: History },
+  { id: "plan", label: "Plan", icon: Target },
+  { id: "wishlist", label: "Wishlist", icon: Gift },
 ];
 
 export function Dashboard({
@@ -52,27 +50,12 @@ export function Dashboard({
   const [tab, setTab] = useState<Tab>("add");
   const [pushEnabled, setPushEnabled] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [openGroup, setOpenGroup] = useState<GroupId | null>(null);
-  const navRef = useRef<HTMLElement>(null);
   useApplyRecurring(userId);
 
   function selectTab(k: Tab) {
     setTab(k);
-    setMobileMenuOpen(false);
-    setOpenGroup(null);
+    window.scrollTo({ top: 0 });
   }
-
-  // Closes an open desktop dropdown when clicking anywhere outside the nav — the dropdown only
-  // opens/closes on click (no hover), so this is the sole way to dismiss it without picking a tab.
-  useEffect(() => {
-    if (!openGroup) return;
-    function handleClick(e: MouseEvent) {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) setOpenGroup(null);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [openGroup]);
 
   async function handleExport() {
     setExporting(true);
@@ -120,7 +103,7 @@ export function Dashboard({
       } else if (
         confirm(
           bankExpiresSoon
-            ? "Your bank connection is expiring — renew it now? (You'll be redirected to the bank.)"
+            ? "Your bank connection is expiring. Renew it now? (You'll be redirected to the bank.)"
             : "Bank is connected. Renew the connection now? (Cancel to keep it as is.)"
         )
       ) {
@@ -135,70 +118,39 @@ export function Dashboard({
     }
   }
 
+  const iconButton =
+    "inline-flex size-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground active:scale-95 disabled:opacity-50";
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-border sticky top-0 bg-background/80 backdrop-blur z-10">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setMobileMenuOpen((v) => !v)}
-              className="md:hidden text-muted-foreground hover:text-foreground transition p-2 -ml-2"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-            </button>
-            <img src={logo} alt="" className="h-7 w-7 logo-glow" />
-            <span className="font-semibold tracking-tight">FinanceTracker</span>
+    <div className="min-h-dvh">
+      <div className="aurora" aria-hidden />
+
+      <header className="glass-bar sticky top-0 z-20 border-b border-border pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto] items-center gap-4 px-4 sm:px-6 md:grid-cols-[1fr_auto_1fr]">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <img src={logo} alt="" className="logo-glow size-7 shrink-0" />
+            <span className="truncate font-semibold tracking-tight">FinanceTracker</span>
           </div>
 
-          <nav ref={navRef} className="hidden md:flex items-center gap-1 text-sm">
-            {TAB_GROUPS.map((group) => {
-              const activeTab = group.tabs.find(([k]) => k === tab);
-              return (
-                <div key={group.id} className="relative">
-                  <button
-                    onClick={() => setOpenGroup((g) => (g === group.id ? null : group.id))}
-                    aria-expanded={openGroup === group.id}
-                    className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${
-                      activeTab ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <span>
-                      {group.label}
-                      {activeTab && <span className="text-muted-foreground"> · {activeTab[1]}</span>}
-                    </span>
-                    <ChevronDown
-                      className={`size-3.5 transition-transform ${openGroup === group.id ? "rotate-180" : ""}`}
-                    />
-                  </button>
+          <DesktopNav tab={tab} onSelect={selectTab} />
 
-                  {openGroup === group.id && (
-                    <div className="absolute top-full left-0 mt-1 min-w-36 bg-popover border border-border rounded-lg shadow-lg py-1 z-30">
-                      {group.tabs.map(([k, label]) => (
-                        <button
-                          key={k}
-                          onClick={() => selectTab(k)}
-                          className={`w-full text-left px-3 py-1.5 transition ${
-                            tab === k
-                              ? "bg-secondary text-foreground"
-                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-1">
+          <div className="flex items-center justify-end gap-0.5 sm:gap-1">
+            <button
+              onClick={() => selectTab("add")}
+              aria-current={tab === "add" ? "page" : undefined}
+              className={`mr-2 hidden h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium transition md:inline-flex active:scale-[0.97] ${
+                tab === "add"
+                  ? "bg-primary/15 text-primary ring-1 ring-primary/40"
+                  : "bg-primary text-primary-foreground hover:brightness-110"
+              }`}
+            >
+              <Plus className="size-4" strokeWidth={2.4} />
+              Add entry
+            </button>
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="text-muted-foreground hover:text-foreground transition p-2 disabled:opacity-50"
+              className={iconButton}
               aria-label="Export all data as backup"
               title="Download a backup of all your data"
             >
@@ -207,81 +159,145 @@ export function Dashboard({
             <button
               onClick={handleBank}
               disabled={bankBusy}
-              className="text-muted-foreground hover:text-foreground transition p-2 disabled:opacity-50"
+              className={iconButton}
               aria-label={bankConnected ? "Manage bank connection" : "Connect bank"}
               title={
                 bankConnected
                   ? bankExpiresSoon
-                    ? "Bank connection expiring soon — click to renew"
-                    : "Bank connected — automatic imports are on"
+                    ? "Bank connection expiring soon. Click to renew"
+                    : "Bank connected, automatic imports are on"
                   : "Connect your bank for automatic imports"
               }
             >
               <Landmark
-                className={`size-4 ${bankConnected ? (bankExpiresSoon ? "text-amber-500" : "text-primary") : ""}`}
+                className={`size-4 ${bankConnected ? (bankExpiresSoon ? "text-gold" : "text-primary") : ""}`}
               />
             </button>
             {isPushSupported() && (
               <button
                 onClick={togglePush}
-                className="text-muted-foreground hover:text-foreground transition p-2"
+                className={iconButton}
                 aria-label={pushEnabled ? "Disable reminders" : "Enable reminders"}
                 title={pushEnabled ? "Weekly/month-end reminders are on" : "Enable weekly/month-end reminders"}
               >
                 {pushEnabled ? <Bell className="size-4 text-primary" /> : <BellOff className="size-4" />}
               </button>
             )}
-            <button
-              onClick={onSignOut}
-              className="text-muted-foreground hover:text-foreground transition p-2"
-              aria-label="Log out"
-            >
+            <button onClick={onSignOut} className={iconButton} aria-label="Log out" title="Log out">
               <LogOut className="size-4" />
             </button>
           </div>
         </div>
-
-        {mobileMenuOpen && (
-          <>
-            <button
-              className="md:hidden fixed inset-0 top-16 z-10 bg-background/60"
-              aria-label="Close menu"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <nav className="md:hidden absolute top-16 left-0 right-0 z-20 bg-background border-b border-border px-6 py-3 flex flex-col text-sm">
-              {TAB_GROUPS.map((group, i) => (
-                <div key={group.id} className={i > 0 ? "mt-3" : undefined}>
-                  <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
-                    {group.label}
-                  </div>
-                  {group.tabs.map(([k, label]) => (
-                    <button
-                      key={k}
-                      onClick={() => selectTab(k)}
-                      className={`w-full px-3 py-2 rounded-md text-left transition ${
-                        tab === k ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </nav>
-          </>
-        )}
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-10">
-        {tab === "add" && (
-          <AddView userId={userId} displayName={displayName} onUpdateDisplayName={onUpdateDisplayName} />
-        )}
-        {tab === "recurring" && <RecurringView userId={userId} />}
-        {tab === "month" && <PeriodView mode="month" userId={userId} />}
-        {tab === "plan" && <PlanView userId={userId} />}
-        {tab === "year" && <PeriodView mode="year" userId={userId} />}
-        {tab === "history" && <HistoryView userId={userId} />}
+      <main className="mx-auto max-w-6xl px-4 pb-36 pt-6 sm:px-6 md:pb-20 md:pt-10">
+        {/* key: each tab mounts fresh, so its entrance motion plays when you switch to it. */}
+        <div key={tab}>
+          {tab === "add" && (
+            <AddView userId={userId} displayName={displayName} onUpdateDisplayName={onUpdateDisplayName} />
+          )}
+          {tab === "overview" && <PeriodView userId={userId} />}
+          {tab === "history" && <HistoryView userId={userId} />}
+          {tab === "plan" && <PlanView userId={userId} />}
+          {tab === "wishlist" && <WishlistView userId={userId} />}
+        </div>
       </main>
+
+      <MobileTabBar tab={tab} onSelect={selectTab} />
     </div>
+  );
+}
+
+// Pill row with one sliding highlight behind the active tab. When Add is open, no pill is active and
+// the highlight fades out instead of jumping.
+function DesktopNav({ tab, onSelect }: { tab: Tab; onSelect: (t: Tab) => void }) {
+  const refs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const el = refs.current[tab];
+    if (el) setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [tab]);
+
+  return (
+    <nav aria-label="Views" className="relative hidden items-center rounded-full glass p-1 text-sm md:flex">
+      <span
+        aria-hidden
+        className={`absolute inset-y-1 left-0 rounded-full bg-foreground/[0.1] transition-[transform,width,opacity] duration-200 ease-in-out motion-reduce:transition-[opacity] ${
+          tab === "add" ? "opacity-0" : "opacity-100"
+        }`}
+        style={indicator ? { width: indicator.width, transform: `translateX(${indicator.left}px)` } : { width: 0 }}
+      />
+      {NAV.map(({ id, label, icon: Icon }) => (
+        <button
+          key={id}
+          ref={(el) => {
+            refs.current[id] = el;
+          }}
+          onClick={() => onSelect(id)}
+          aria-current={tab === id ? "page" : undefined}
+          className={`relative flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition-colors ${
+            tab === id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Icon className={`size-4 ${tab === id ? "text-primary" : ""}`} strokeWidth={2} />
+          {label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function MobileTabBar({ tab, onSelect }: { tab: Tab; onSelect: (t: Tab) => void }) {
+  const item = (id: Exclude<Tab, "add">) => {
+    const { label, icon: Icon } = NAV.find((n) => n.id === id)!;
+    const active = tab === id;
+    return (
+      <button
+        key={id}
+        onClick={() => onSelect(id)}
+        aria-current={active ? "page" : undefined}
+        className={`flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors active:scale-95 ${
+          active ? "text-foreground" : "text-muted-foreground"
+        }`}
+      >
+        <span
+          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200 ${
+            active ? "bg-primary/15" : ""
+          }`}
+        >
+          <Icon className={`size-5 transition-colors ${active ? "text-primary" : ""}`} strokeWidth={active ? 2.2 : 1.8} />
+        </span>
+        {label}
+      </button>
+    );
+  };
+
+  return (
+    <nav
+      aria-label="Views"
+      className="glass-bar fixed inset-x-0 bottom-0 z-20 border-t border-border pb-[env(safe-area-inset-bottom)] md:hidden"
+    >
+      <div className="mx-auto grid max-w-md grid-cols-5 px-2">
+        {item("overview")}
+        {item("history")}
+        <button
+          onClick={() => onSelect("add")}
+          aria-current={tab === "add" ? "page" : undefined}
+          className="flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium text-foreground"
+        >
+          <span
+            className={`-mt-6 flex size-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_24px_-6px_oklch(0.86_0.14_165/0.55)] ring-4 ring-background transition-transform duration-150 ease-out active:scale-95 ${
+              tab === "add" ? "" : "brightness-95"
+            }`}
+          >
+            <Plus className="size-6" strokeWidth={2.4} />
+          </span>
+          Add
+        </button>
+        {item("plan")}
+        {item("wishlist")}
+      </div>
+    </nav>
   );
 }
