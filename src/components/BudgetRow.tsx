@@ -1,10 +1,11 @@
-// One named plan line in Plan → Budget, shown under its category group: view mode, or inline edit
-// of its name, amount and category (moving it to another category moves it to that group).
+// One named plan line in Plan → Budget, shown under its category group: view mode (with its optional
+// link), or inline edit of name, amount, category and link (another category moves it to that group).
 import { useState } from "react";
-import { Pencil, Check, X, Trash2 } from "lucide-react";
+import { Pencil, Check, X, Trash2, ExternalLink } from "lucide-react";
 import type { Budget } from "@/lib/finance-data";
 import { Money } from "@/components/Money";
 import { fieldSm, rowActions, rowIconButton } from "@/lib/ui";
+import { normalizeUrl, safeHref } from "@/lib/url";
 
 export function BudgetRow({
   budget,
@@ -14,7 +15,7 @@ export function BudgetRow({
 }: {
   budget: Budget;
   categories: string[];
-  onSave: (updates: { name: string; amount: number; category: string }) => void;
+  onSave: (updates: { name: string; amount: number; category: string; url: string | null }) => void;
   onDelete: () => void;
 }) {
   // Rows from before plan lines had names fall back to their category.
@@ -23,9 +24,11 @@ export function BudgetRow({
   const [name, setName] = useState(label);
   const [amount, setAmount] = useState(String(budget.amount));
   const [category, setCategory] = useState(budget.category);
+  const [link, setLink] = useState(budget.url ?? "");
 
   function startEdit() {
     setName(label);
+    setLink(budget.url ?? "");
     setAmount(String(budget.amount));
     setCategory(budget.category);
     setEditing(true);
@@ -33,10 +36,13 @@ export function BudgetRow({
 
   function save() {
     const n = parseFloat(amount.replace(",", "."));
-    if (!n || n <= 0 || !category) return;
-    onSave({ name: name.trim() || category, amount: n, category });
+    const url = normalizeUrl(link);
+    if (!n || n <= 0 || !category || url === undefined) return;
+    onSave({ name: name.trim() || category, amount: n, category, url });
     setEditing(false);
   }
+
+  const href = safeHref(budget.url);
 
   if (editing) {
     return (
@@ -74,6 +80,18 @@ export function BudgetRow({
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
+        <input
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          inputMode="url"
+          placeholder="Link"
+          aria-label="Link"
+          className={`${fieldSm} min-w-[8rem] flex-1`}
+        />
         <div className="ml-auto flex items-center">
           <button onClick={save} className={`${rowIconButton} hover:text-primary`} aria-label="Save">
             <Check className="size-4" />
@@ -87,8 +105,21 @@ export function BudgetRow({
   }
 
   return (
-    <li className="group flex items-center gap-3 py-1.5 text-sm">
-      <span className="min-w-0 flex-1 truncate text-muted-foreground">{label}</span>
+    <li className="group flex items-center gap-3 py-0.5 text-sm">
+      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+        <span className="truncate text-muted-foreground">{label}</span>
+        {href && (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+            aria-label={`Open link for ${label}`}
+          >
+            <ExternalLink className="size-3.5" />
+          </a>
+        )}
+      </span>
       <Money value={budget.amount} />
       <div className={rowActions}>
         <button onClick={startEdit} className={rowIconButton} aria-label={`Edit ${label}`}>

@@ -334,3 +334,6 @@ alter table public.income_plans enable row level security;
 drop policy if exists "income_plans_all_own" on public.income_plans;
 create policy "income_plans_all_own" on public.income_plans
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Optional link on a plan line (e.g. the product or the bill), shown as an icon next to its name.
+alter table public.budgets add column if not exists url text;

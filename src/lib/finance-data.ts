@@ -20,6 +20,7 @@ export type Budget = {
   category: string;
   amount: number;
   name: string | null; // null on rows created before plan lines had names; shown as the category
+  url: string | null; // optional http(s) link, e.g. the product page or the bill
 };
 
 export type RecurringExpense = {
@@ -203,7 +204,7 @@ export function useBudgets(userId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("budgets")
-        .select("id, year, month, category, amount, name")
+        .select("id, year, month, category, amount, name, url")
         .order("created_at");
       if (error) throw error;
       return data as Budget[];
@@ -298,7 +299,16 @@ export function useDeleteIncomePlan(userId: string | undefined) {
 export function useUpdateBudget(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; name: string; amount: number; category: string }) => {
+    mutationFn: async ({
+      id,
+      ...updates
+    }: {
+      id: string;
+      name: string;
+      amount: number;
+      category: string;
+      url: string | null;
+    }) => {
       const { error } = await supabase.from("budgets").update(updates).eq("id", id);
       if (error) throw error;
     },

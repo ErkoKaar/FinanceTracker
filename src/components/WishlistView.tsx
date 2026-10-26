@@ -16,19 +16,7 @@ import {
 import { Money, RollingMoney } from "@/components/Money";
 import { Panel, EmptyNote } from "@/components/Panel";
 import { field, fieldSm, rowActions, rowIconButton } from "@/lib/ui";
-
-/** "example.com/x" → "https://example.com/x"; anything that isn't http(s) after that is rejected. */
-function normalizeUrl(raw: string): string | null | undefined {
-  const value = raw.trim();
-  if (!value) return null;
-  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
-  try {
-    const url = new URL(withScheme);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.href : undefined;
-  } catch {
-    return undefined;
-  }
-}
+import { normalizeUrl, safeHref } from "@/lib/url";
 
 function parsePrice(raw: string) {
   const n = parseFloat(raw.replace(",", "."));
@@ -313,8 +301,7 @@ function WishlistRow({
     );
   }
 
-  // http(s) only, checked again at render time so an odd stored value never becomes a live link.
-  const href = item.url && /^https?:\/\//i.test(item.url) ? item.url : null;
+  const href = safeHref(item.url);
 
   return (
     <li className="group px-5 py-3">

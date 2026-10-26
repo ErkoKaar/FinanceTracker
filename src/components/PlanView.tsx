@@ -26,6 +26,7 @@ import { RecurringView } from "@/components/RecurringView";
 import { Money } from "@/components/Money";
 import { Panel, EmptyNote } from "@/components/Panel";
 import { field } from "@/lib/ui";
+import { normalizeUrl } from "@/lib/url";
 
 type Section = "budget" | "recurring";
 
@@ -152,7 +153,7 @@ function BudgetSection({ userId }: { userId: string }) {
   function copyPrevious() {
     const onError = () => setError("Couldn't copy the plan. Check your connection and try again.");
     copyBudgets.mutate(
-      copyable.spending.map(({ category, amount, name }) => ({ year, month, category, amount, name })),
+      copyable.spending.map(({ category, amount, name, url }) => ({ year, month, category, amount, name, url })),
       { onError }
     );
     addIncomePlans.mutate(copyable.income.map(({ name, amount }) => ({ year, month, name, amount })), { onError });
@@ -175,6 +176,7 @@ function BudgetSection({ userId }: { userId: string }) {
   const spentOnPlanned = groups.reduce((a, g) => a + g.spent, 0);
 
   const [name, setName] = useState("");
+  const [link, setLink] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -191,12 +193,18 @@ function BudgetSection({ userId }: { userId: string }) {
       return;
     }
     if (!category) return;
+    const url = normalizeUrl(link);
+    if (url === undefined) {
+      setError("The link doesn't look like a web address.");
+      return;
+    }
     setError(null);
     addBudget.mutate(
-      { year, month, category, amount: n, name: name.trim() || category },
+      { year, month, category, amount: n, name: name.trim() || category, url },
       {
         onSuccess: () => {
           setName("");
+          setLink("");
           setAmount("");
         },
         onError: () => setError("Couldn't save. Check your connection and try again."),
@@ -209,6 +217,7 @@ function BudgetSection({ userId }: { userId: string }) {
     setSelected(target);
     setAmount("");
     setName("");
+    setLink("");
     setDraftIncome(0);
     setError(null);
   }
@@ -298,7 +307,7 @@ function BudgetSection({ userId }: { userId: string }) {
             {groups.map((g) => {
               const over = g.spent > g.planned;
               return (
-                <section key={g.category} className="border-t border-border px-5 py-4 first:border-t-0 first:pt-1">
+                <section key={g.category} className="border-t border-border px-5 py-3 first:border-t-0 first:pt-1">
                   <div className="flex items-baseline justify-between gap-3 text-sm">
                     <h3 className="truncate font-medium">{g.category}</h3>
                     {isFuture ? (
@@ -313,23 +322,17 @@ function BudgetSection({ userId }: { userId: string }) {
                       </span>
                     )}
                   </div>
+                  {/* Bar and its "over / left" note share one line to keep each category short. */}
                   {!isFuture && (
-                    <>
-                      <BudgetBar value={g.spent} planned={g.planned} />
-                      <p className={`mt-1.5 text-xs ${over ? "text-destructive" : "text-muted-foreground"}`}>
-                        {over ? (
-                          <>
-                            <Money value={g.spent - g.planned} /> over plan
-                          </>
-                        ) : (
-                          <>
-                            <Money value={g.planned - g.spent} /> left
-                          </>
-                        )}
-                      </p>
-                    </>
+                    <div className="mt-1.5 flex items-center gap-3">
+                      <BudgetBar value={g.spent} planned={g.planned} className="flex-1" />
+                      <span className={`shrink-0 text-xs ${over ? "text-destructive" : "text-muted-foreground"}`}>
+                        <Money value={Math.round(Math.abs(g.planned - g.spent))} centsClassName="hidden" />{" "}
+                        {over ? "over" : "left"}
+                      </span>
+                    </div>
                   )}
-                  <ul className="mt-2">
+                  <ul className="mt-1">
                     {g.lines.map((b) => (
                       <BudgetRow
                         key={b.id}
@@ -348,7 +351,7 @@ function BudgetSection({ userId }: { userId: string }) {
         <form
           onSubmit={submit}
           noValidate
-          className="grid grid-cols-2 gap-3 border-t border-border px-5 py-4 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,10rem)_auto] sm:items-end"
+          className="grid grid-cols-2 gap-3 border-t border-border px-5 py-4 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_6.5rem_minmax(0,8.5rem)_auto] sm:items-end"
         >
           <div className="col-span-2 space-y-1.5 sm:col-span-1">
             <label htmlFor="plan-name" className={fieldLabel}>What is it for?</label>
@@ -357,6 +360,18 @@ function BudgetSection({ userId }: { userId: string }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Groceries"
+              className={`${field} w-full`}
+            />
+          </div>
+          <div className="col-span-2 space-y-1.5 sm:col-span-1">
+            <label htmlFor="plan-link" className={fieldLabel}>Link (optional)</label>
+            <input
+              id="plan-link"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="shop.ee/..."
+              inputMode="url"
+              autoComplete="off"
               className={`${field} w-full`}
             />
           </div>
@@ -398,7 +413,7 @@ function BudgetSection({ userId }: { userId: string }) {
             <span className="sm:sr-only">Add</span>
           </button>
           {error && (
-            <p role="alert" className="col-span-2 text-xs text-destructive sm:col-span-4">
+            <p role="alert" className="col-span-2 text-xs text-destructive sm:col-span-5">
               {error}
             </p>
           )}
