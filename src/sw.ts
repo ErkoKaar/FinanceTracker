@@ -7,6 +7,17 @@ declare const self: ServiceWorkerGlobalScope;
 
 precacheAndRoute(self.__WB_MANIFEST);
 
+// Take over as soon as a new deploy's worker is installed, instead of waiting until every open
+// FinanceTracker tab/PWA window is closed — otherwise a plain refresh keeps showing the old version.
+// Pages already open keep their current JS until their next load.
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("push", (event) => {
   const data = event.data?.json() ?? {};
   const title = data.title ?? "FinanceTracker";
