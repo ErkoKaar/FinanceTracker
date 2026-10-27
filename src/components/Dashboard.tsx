@@ -14,12 +14,15 @@ import {
   History,
   Target,
   Gift,
+  RotateCcw,
+  Github,
   type LucideIcon,
 } from "lucide-react";
 import { useApplyRecurring, useBankConnections, useDisconnectBank } from "@/lib/finance-data";
 import { isPushSupported, getPushSubscriptionStatus, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { startBankAuth } from "@/lib/bank";
 import { exportAllData } from "@/lib/export";
+import { DEMO_STORAGE_KEY, REPO_URL } from "@/lib/demo/config";
 import { AddView } from "@/components/AddView";
 import { PeriodView } from "@/components/PeriodView";
 import { PlanView } from "@/components/PlanView";
@@ -28,6 +31,14 @@ import { HistoryView } from "@/components/HistoryView";
 import logo from "@/assets/finance-tracker-logo-transparent.png";
 
 type Tab = "add" | "overview" | "history" | "plan" | "wishlist";
+const TABS: Tab[] = ["add", "overview", "history", "plan", "wishlist"];
+
+// `?tab=plan` opens a view directly (handy for links and screenshots). Otherwise the real app opens
+// on Add, the everyday action, and the demo on Overview, which shows the most at a glance.
+function initialTab(): Tab {
+  const requested = new URLSearchParams(window.location.search).get("tab");
+  return TABS.includes(requested as Tab) ? (requested as Tab) : __DEMO__ ? "overview" : "add";
+}
 
 const NAV: { id: Exclude<Tab, "add">; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
@@ -47,7 +58,7 @@ export function Dashboard({
   onUpdateDisplayName: (name: string) => void;
   onSignOut: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>("add");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [exporting, setExporting] = useState(false);
   useApplyRecurring(userId);
@@ -126,6 +137,7 @@ export function Dashboard({
       <div className="aurora" aria-hidden />
 
       <header className="glass-bar sticky top-0 z-20 border-b border-border pt-[env(safe-area-inset-top)]">
+        {__DEMO__ && <DemoBar />}
         <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto] items-center gap-4 px-4 sm:px-6 md:grid-cols-[1fr_auto_1fr]">
           <div className="flex min-w-0 items-center gap-2.5">
             <img src={logo} alt="" className="logo-glow size-7 shrink-0" />
@@ -156,24 +168,26 @@ export function Dashboard({
             >
               <Download className="size-4" />
             </button>
-            <button
-              onClick={handleBank}
-              disabled={bankBusy}
-              className={iconButton}
-              aria-label={bankConnected ? "Manage bank connection" : "Connect bank"}
-              title={
-                bankConnected
-                  ? bankExpiresSoon
-                    ? "Bank connection expiring soon. Click to renew"
-                    : "Bank connected, automatic imports are on"
-                  : "Connect your bank for automatic imports"
-              }
-            >
-              <Landmark
-                className={`size-4 ${bankConnected ? (bankExpiresSoon ? "text-gold" : "text-primary") : ""}`}
-              />
-            </button>
-            {isPushSupported() && (
+            {!__DEMO__ && (
+              <button
+                onClick={handleBank}
+                disabled={bankBusy}
+                className={iconButton}
+                aria-label={bankConnected ? "Manage bank connection" : "Connect bank"}
+                title={
+                  bankConnected
+                    ? bankExpiresSoon
+                      ? "Bank connection expiring soon. Click to renew"
+                      : "Bank connected, automatic imports are on"
+                    : "Connect your bank for automatic imports"
+                }
+              >
+                <Landmark
+                  className={`size-4 ${bankConnected ? (bankExpiresSoon ? "text-gold" : "text-primary") : ""}`}
+                />
+              </button>
+            )}
+            {!__DEMO__ && isPushSupported() && (
               <button
                 onClick={togglePush}
                 className={iconButton}
@@ -183,9 +197,11 @@ export function Dashboard({
                 {pushEnabled ? <Bell className="size-4 text-primary" /> : <BellOff className="size-4" />}
               </button>
             )}
-            <button onClick={onSignOut} className={iconButton} aria-label="Log out" title="Log out">
-              <LogOut className="size-4" />
-            </button>
+            {!__DEMO__ && (
+              <button onClick={onSignOut} className={iconButton} aria-label="Log out" title="Log out">
+                <LogOut className="size-4" />
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -299,5 +315,46 @@ function MobileTabBar({ tab, onSelect }: { tab: Tab; onSelect: (t: Tab) => void 
         {item("wishlist")}
       </div>
     </nav>
+  );
+}
+
+// Slim strip on the public demo saying what it is, with a way back to the sample data and the code.
+function DemoBar() {
+  function reset() {
+    try {
+      localStorage.removeItem(DEMO_STORAGE_KEY);
+    } catch {
+      // Storage unavailable: a reload still starts from the sample data.
+    }
+    window.location.reload();
+  }
+
+  return (
+    <div className="border-b border-border bg-primary/[0.08] text-xs">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-6">
+        <p className="text-foreground/90">
+          Demo with sample data. <span className="text-muted-foreground">Your changes stay in this browser.</span>
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+          >
+            <RotateCcw className="size-3.5" />
+            Reset demo
+          </button>
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+          >
+            <Github className="size-3.5" />
+            Source on GitHub
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }

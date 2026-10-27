@@ -10,3 +10,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// True in the public demo build (`npm run build:demo`, or FT_DEMO=1): sample data in the browser
+// instead of Supabase. Replaced at build time by vite.config.ts.
+declare const __DEMO__: boolean;
