@@ -17,6 +17,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// The bank sends the user back to this URL with a one-time code, so only accept the app's own
+// /bank-callback page (https, or http on localhost for development). Enable Banking also rejects
+// redirect URLs that aren't registered for the application; this is the app's own check.
+function isAllowedRedirect(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    return (url.protocol === "https:" || (local && url.protocol === "http:")) && url.pathname === "/bank-callback" && !url.search;
+  } catch {
+    return false;
+  }
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -38,23 +52,26 @@ Deno.serve(async (req) => {
     const body = await req.json();
 
     if (body.action === "start") {
-      if (typeof body.redirectUrl !== "string") return json({ error: "redirectUrl is required" }, 400);
+      if (!isAllowedRedirect(body.redirectUrl)) return json({ error: "Invalid redirectUrl" }, 400);
       // Ask for the longest consent the bank allows (typically 180 days).
       const { aspsps } = await ebFetch(`/aspsps?country=${ASPSP.country}`);
       // deno-lint-ignore no-explicit-any
       const bank = (aspsps ?? []).find((a: any) => a.name === ASPSP.name);
       const maxSeconds = bank?.maximum_consent_validity ?? 180 * 24 * 3600;
+      // Returned to the browser, which keeps it for the trip to the bank and checks it on the way
+      // back, so a callback link the user didn't start themselves is refused.
+      const state = crypto.randomUUID();
       const { url } = await ebFetch("/auth", {
         method: "POST",
         body: JSON.stringify({
           access: { valid_until: new Date(Date.now() + maxSeconds * 1000).toISOString() },
           aspsp: ASPSP,
-          state: crypto.randomUUID(),
+          state,
           redirect_url: body.redirectUrl,
           psu_type: "personal",
         }),
       });
-      return json({ url });
+      return json({ url, state });
     }
 
     if (body.action === "callback") {
@@ -95,7 +112,8 @@ Deno.serve(async (req) => {
 
     return json({ error: "Unknown action" }, 400);
   } catch (err) {
+    // Details stay in the function logs; the browser gets a plain message.
     console.error(err);
-    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+    return json({ error: "Bank connection failed. Try again in a moment." }, 500);
   }
 });

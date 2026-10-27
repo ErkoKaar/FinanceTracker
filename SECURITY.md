@@ -25,8 +25,9 @@ time to address the issue before disclosing it publicly.
 ## Scope
 
 In scope: authentication/authorization (Supabase Auth, Row Level Security policies), data exposure
-between users, and the `send-reminders` Supabase Edge Function (which uses the Supabase
-service-role key).
+between users, and the Supabase Edge Functions (`send-reminders`, `bank-connect`, `bank-sync`),
+which use the Supabase service-role key. You can also report privately through GitHub's
+"Report a vulnerability" button on the Security tab.
 
 Out of scope: issues in third-party dependencies (report those upstream) and purely cosmetic/UI
 bugs with no security impact.

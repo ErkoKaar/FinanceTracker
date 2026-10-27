@@ -219,18 +219,26 @@ create policy "push_subscriptions_all_own" on public.push_subscriptions
 -- Run this part only AFTER deploying the send-reminders Edge Function (see its file header for
 -- the deploy command). Calls it once a day; the function itself decides whether to actually send
 -- anything (Sundays + last day of the month) and is a no-op every other day.
+--
+-- The cron-only functions refuse requests without the shared secret (see
+-- supabase/functions/_shared/cron-auth.ts). Both values live in Supabase Vault, never in this file.
+-- One-time setup, in the SQL editor with your own values:
+--   select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+--   select vault.create_secret('<long random string>', 'cron_secret');
+-- and give the Edge Functions the same secret:
+--   npx supabase secrets set CRON_SECRET=<the same long random string>
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
 select cron.schedule(
   'send-reminders-daily',
-  '0 9 * * *', -- 09:00 UTC daily — adjust to taste
+  '0 9 * * *', -- 09:00 UTC daily, adjust to taste
   $$
   select net.http_post(
-    url := 'https://rsrxnwhfwmizlljktbqs.supabase.co/functions/v1/send-reminders',
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/send-reminders',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzcnhud2hmd21pemxsamt0YnFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NDQwNTIsImV4cCI6MjA5NzUyMDA1Mn0.qsUepTe0a2t8m6SIletV-_q2qZ-M0HNFhNMbOUDsgeU'
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
     )
   );
   $$
@@ -283,10 +291,10 @@ select cron.schedule(
   '30 5 * * *',
   $$
   select net.http_post(
-    url := 'https://rsrxnwhfwmizlljktbqs.supabase.co/functions/v1/bank-sync',
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/bank-sync',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzcnhud2hmd21pemxsamt0YnFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NDQwNTIsImV4cCI6MjA5NzUyMDA1Mn0.qsUepTe0a2t8m6SIletV-_q2qZ-M0HNFhNMbOUDsgeU'
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
     )
   );
   $$

@@ -106,7 +106,7 @@ Every kind of information has one home, one colour and one icon, so you always k
 
 ## How it's built
 
-- **No separate backend.** The browser talks to Supabase directly and Row Level Security is the authorization model: every table is scoped to `auth.uid()`. Server-side code is limited to the SQL schema and three Edge Functions (reminders, bank connect, bank sync).
+- **No separate backend.** The browser talks to Supabase directly and Row Level Security is the authorization model: every table is scoped to `auth.uid()`. Server-side code is limited to the SQL schema and three Edge Functions (reminders, bank connect, bank sync). The two cron-only functions check a shared secret kept in Supabase Vault, and the bank flow only accepts a callback that the same browser tab started.
 - **All data access lives in one file.** `src/lib/finance-data.ts` holds every TanStack Query hook (expenses, income, categories, recurring items, plan lines, expected income, wishlist, bank connections).
 - **Recurring items become real entries.** `useApplyRecurring` writes them into `expenses`/`incomes` once per month, linked back by `recurring_expense_id`/`recurring_income_id`, so they can be edited or deleted like anything else.
 - **Plans are monthly.** Plan lines and expected income belong to a year and month; years in History show spending per category and a trend instead of a plan comparison.
@@ -162,11 +162,18 @@ Web Push needs a VAPID key pair and a deployed Edge Function, which needs the Su
 npx web-push generate-vapid-keys        # public key goes into .env.local
 npx supabase login
 npx supabase link --project-ref <your-project-ref>
-npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=...
+npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... CRON_SECRET=<long random string>
 npx supabase functions deploy send-reminders --no-verify-jwt
 ```
 
-Then run the `pg_cron` block in `schema.sql` to schedule the daily check. The function decides by itself whether today is a Sunday or the last day of the month.
+The cron-only functions refuse any request without that secret, so nobody else can trigger them. Store the same value, plus your project URL, in Supabase Vault (SQL Editor), then run the `pg_cron` block in `schema.sql`:
+
+```sql
+select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+select vault.create_secret('<the same long random string>', 'cron_secret');
+```
+
+The function decides by itself whether today is a Sunday or the last day of the month.
 
 ### 4. Bank import (optional)
 
@@ -178,7 +185,7 @@ npx supabase functions deploy bank-connect
 npx supabase functions deploy bank-sync --no-verify-jwt
 ```
 
-`bank-sync` is scheduled by the second cron block in `schema.sql`. Keep the private key out of the repository.
+`bank-sync` is scheduled by the second cron block in `schema.sql` and uses the same `CRON_SECRET`. Keep the private key out of the repository (`*.pem` is git-ignored).
 
 ## Scripts
 
@@ -197,7 +204,7 @@ Both sites deploy from this repository on every push to `main`:
 - **The app**: a Vercel project with the three `VITE_*` variables set. Point Supabase Auth's Site URL and Redirect URLs at its domain so confirmation emails link back correctly.
 - **The demo**: a second Vercel project with one variable, `FT_DEMO=1`, which makes the normal `npm run build` produce the demo. It needs no Supabase keys.
 
-`vercel.json` adds the SPA fallback and no-cache headers for `sw.js` and `manifest.webmanifest`.
+`vercel.json` adds the SPA fallback, no-cache headers for `sw.js` and `manifest.webmanifest`, and security headers for every page: a Content Security Policy (scripts only from the app itself, network only to Supabase), no framing, `nosniff` and a strict referrer policy.
 
 ## License
 

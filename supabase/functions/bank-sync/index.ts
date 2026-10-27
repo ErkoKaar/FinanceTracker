@@ -4,15 +4,20 @@
 // renewed by the user in the app).
 //
 // Deploy: npx supabase functions deploy bank-sync --no-verify-jwt
-// Secrets needed: ENABLE_BANKING_APP_ID, ENABLE_BANKING_PRIVATE_KEY (+ the VAPID keys already
-// set for send-reminders; expiry reminders are skipped if they're absent).
+// Secrets needed: ENABLE_BANKING_APP_ID, ENABLE_BANKING_PRIVATE_KEY, CRON_SECRET (+ the VAPID keys
+// already set for send-reminders; expiry reminders are skipped if they're absent).
+// Only the cron job may call it: requests without the CRON_SECRET header are refused, otherwise
+// anyone could use up the banks' few allowed unattended fetches per day.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3";
 import { syncAccount } from "../_shared/enablebanking.ts";
+import { forbidden, isCronRequest } from "../_shared/cron-auth.ts";
 
 const REMIND_AT_DAYS_LEFT = [14, 7, 3, 1];
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  if (!isCronRequest(req)) return forbidden();
+
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data: connections, error } = await supabase.from("bank_connections").select("*");
   if (error) throw error;
@@ -75,5 +80,5 @@ Deno.serve(async () => {
     );
   }
 
-  return new Response(JSON.stringify({ imported, failures }), { status: 200 });
+  return new Response(JSON.stringify({ imported, failed: failures.length }), { status: 200 });
 });

@@ -3,12 +3,14 @@
 // ("log last month's entries") to every row in push_subscriptions. No-ops on any other day.
 //
 // Deploy: npx supabase functions deploy send-reminders --no-verify-jwt
-// Secrets needed: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY (SUPABASE_URL/SERVICE_ROLE_KEY are
-// auto-injected by Supabase). Set with:
-//   npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=...
+// Secrets needed: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, CRON_SECRET (SUPABASE_URL/SERVICE_ROLE_KEY
+// are auto-injected by Supabase). Set with:
+//   npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... CRON_SECRET=...
+// Only the cron job may call it: requests without the CRON_SECRET header are refused.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3";
+import { forbidden, isCronRequest } from "../_shared/cron-auth.ts";
 
 webpush.setVapidDetails(
   "mailto:reminders@financetracker.app",
@@ -16,7 +18,9 @@ webpush.setVapidDetails(
   Deno.env.get("VAPID_PRIVATE_KEY")!
 );
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  if (!isCronRequest(req)) return forbidden();
+
   const now = new Date();
   const isSunday = now.getDay() === 0;
   const tomorrow = new Date(now);

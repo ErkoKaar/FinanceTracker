@@ -4,12 +4,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
-import { completeBankAuth } from "@/lib/bank";
+import { completeBankAuth, consumePendingBankAuth } from "@/lib/bank";
 
 export const Route = createFileRoute("/bank-callback")({
   component: BankCallback,
   validateSearch: (search: Record<string, unknown>) => ({
     code: typeof search.code === "string" ? search.code : undefined,
+    state: typeof search.state === "string" ? search.state : undefined,
     error: typeof search.error === "string" ? search.error : undefined,
   }),
 });
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/bank-callback")({
 type State = { status: "working" | "done" | "error"; message: string };
 
 function BankCallback() {
-  const { code, error: bankError } = Route.useSearch();
+  const { code, state: returnedState, error: bankError } = Route.useSearch();
   const { user, loading } = useAuth();
   const [state, setState] = useState<State>({
     status: "working",
@@ -42,6 +43,13 @@ function BankCallback() {
       return;
     }
     started.current = true;
+    if (!consumePendingBankAuth(returnedState)) {
+      setState({
+        status: "error",
+        message: "This bank link wasn't started from this browser tab. Connect the bank again from the app.",
+      });
+      return;
+    }
     completeBankAuth(code)
       .then((result) =>
         setState({
@@ -52,7 +60,7 @@ function BankCallback() {
       .catch((err) =>
         setState({ status: "error", message: err instanceof Error ? err.message : "Connecting the bank failed." })
       );
-  }, [loading, user, code, bankError]);
+  }, [loading, user, code, returnedState, bankError]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
