@@ -22,6 +22,10 @@ After 15 user messages have accumulated in a single chat, summarize everything d
 
 Write code like a senior developer: think through edge cases, failure modes, and invalid inputs before considering the task done, not just the happy path.
 
+# README policy
+
+The repo is public and README.md is its front page. After a larger change (new feature or view, changed navigation or UI, new setup step, SQL, secret or env variable, changed deployment), check README.md and update whatever it no longer describes correctly, in the same change. If the UI changed visibly, also retake the affected screenshots in `docs/screenshots/` from the demo (`npm run dev:demo`, `?tab=<view>` opens a view directly). Never put the real app's URL, keys or personal data in README.md; link only the demo.
+
 ## Commands
 
 ```bash
