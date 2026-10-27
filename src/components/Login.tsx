@@ -1,36 +1,22 @@
-// Logged-out screen: email/password login + registration form.
+// Logged-out screen: email/password login. Sign-ups are closed (a trigger on auth.users rejects new
+// accounts, see supabase/schema.sql), so there is no registration form; the public demo needs none.
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import logo from "@/assets/finance-tracker-logo-transparent.png";
 import { field, primaryButton } from "@/lib/ui";
 
-export function Login({
-  signIn,
-  signUp,
-}: {
-  signIn: ReturnType<typeof useAuth>["signIn"];
-  signUp: ReturnType<typeof useAuth>["signUp"];
-}) {
+export function Login({ signIn }: { signIn: ReturnType<typeof useAuth>["signIn"] }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setInfo(null);
     setSubmitting(true);
-    if (mode === "login") {
-      const { error } = await signIn(email, password);
-      if (error) setError(error.message);
-    } else {
-      const { data, error } = await signUp(email, password);
-      if (error) setError(error.message);
-      else if (!data.session) setInfo("Check your email to confirm your account before logging in.");
-    }
+    const { error } = await signIn(email, password);
+    if (error) setError(error.message);
     setSubmitting(false);
   }
 
@@ -69,7 +55,7 @@ export function Login({
             <input
               id="login-password"
               type="password"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -81,24 +67,8 @@ export function Login({
               {error}
             </p>
           )}
-          {info && (
-            <p role="status" className="text-xs text-primary">
-              {info}
-            </p>
-          )}
           <button type="submit" disabled={submitting} className={`${primaryButton} w-full`}>
-            {mode === "login" ? "Log in" : "Sign up"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode(mode === "login" ? "register" : "login");
-              setError(null);
-              setInfo(null);
-            }}
-            className="block w-full py-1 text-center text-xs text-muted-foreground transition hover:text-foreground"
-          >
-            {mode === "login" ? "Don't have an account? Sign up" : "Already have an account? Log in"}
+            Log in
           </button>
         </form>
       </div>

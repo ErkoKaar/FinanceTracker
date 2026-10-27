@@ -1,4 +1,4 @@
-// useAuth hook: tracks the current Supabase session and exposes signIn/signUp/signOut.
+// useAuth hook: tracks the current Supabase session and exposes signIn/signOut. (Sign-ups are closed.)
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
@@ -25,11 +25,6 @@ export function useAuth() {
     []
   );
 
-  const signUp = useCallback(
-    (email: string, password: string) => supabase.auth.signUp({ email, password }),
-    []
-  );
-
   const signOut = useCallback(() => supabase.auth.signOut(), []);
 
   const displayName = user?.user_metadata?.display_name ?? user?.email?.split("@")[0] ?? "";
@@ -39,5 +34,5 @@ export function useAuth() {
     if (!error && data.user) setUser(data.user);
   }, []);
 
-  return { user, loading, signIn, signUp, signOut, displayName, updateDisplayName };
+  return { user, loading, signIn, signOut, displayName, updateDisplayName };
 }

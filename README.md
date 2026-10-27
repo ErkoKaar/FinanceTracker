@@ -90,7 +90,7 @@ Every kind of information has one home, one colour and one icon, so you always k
 |---|---|
 | **Bank import** | Connect a bank account through [Enable Banking](https://enablebanking.com) (PSD2). Booked transactions are imported daily, categories are learned from how you sorted earlier ones, and the real balance shows on Overview. |
 | **Reminders** | Web Push nudges on Sundays and at month-end to log anything you missed, even when the app is closed. |
-| **Private by design** | Email and password sign-in, and every row in the database is locked to its owner with Postgres Row Level Security. |
+| **Private by design** | Email and password sign-in with sign-ups closed, and every row in the database is locked to its owner with Postgres Row Level Security. |
 | **Your data, exportable** | One click downloads a JSON backup of everything you own. |
 | **Installable** | A PWA with a custom service worker. New versions take over on the next reload, and going offline shows a clear message instead of a broken screen. |
 
@@ -152,7 +152,7 @@ Just want to look around? `npm run dev:demo` runs the app on sample data with no
 
 ### 2. Database
 
-Open your Supabase project's **SQL Editor** and run [`supabase/schema.sql`](supabase/schema.sql). It is idempotent, so it is also how you upgrade: re-run it after pulling new changes and only what's missing gets added. It creates every table, policy and trigger, including default categories for new sign-ups.
+Open your Supabase project's **SQL Editor** and run [`supabase/schema.sql`](supabase/schema.sql). It is idempotent, so it is also how you upgrade: re-run it after pulling new changes and only what's missing gets added. It creates every table, policy and trigger, including default categories for new sign-ups. Its last block closes sign-ups, so create your own account in the app before running the file the first time (or skip that block).
 
 ### 3. Reminders (optional)
 

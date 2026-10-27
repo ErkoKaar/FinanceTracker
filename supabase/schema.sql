@@ -345,3 +345,25 @@ create policy "income_plans_all_own" on public.income_plans
 
 -- Optional link on a plan line (e.g. the product or the bill), shown as an icon next to its name.
 alter table public.budgets add column if not exists url text;
+
+-- Closed sign-ups (applied on the hosted instance): every new row in auth.users is rejected, so the
+-- public anon key can't be used to create accounts. Existing users sign in as before. If you host
+-- your own copy, create your account first, then run this block. To reopen sign-ups:
+--   drop trigger if exists reject_new_signups on auth.users;
+create or replace function public.reject_new_signups()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  raise exception 'Sign-ups are closed for this FinanceTracker instance.';
+end;
+$$;
+
+drop trigger if exists reject_new_signups on auth.users;
+create trigger reject_new_signups
+  before insert on auth.users
+  for each row execute function public.reject_new_signups();
+
+revoke execute on function public.reject_new_signups() from public, anon, authenticated;

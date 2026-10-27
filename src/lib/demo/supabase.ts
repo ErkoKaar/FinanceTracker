@@ -160,7 +160,6 @@ export const supabase = {
       listeners.forEach((l) => l("SIGNED_IN", session));
       return { data: { session, user: session.user }, error: null };
     },
-    signUp: async () => ({ data: { session: { user: demoUser() }, user: demoUser() }, error: null }),
     signOut: async () => {
       signedIn = false;
       listeners.forEach((l) => l("SIGNED_OUT", null));
