@@ -36,9 +36,9 @@ Every kind of information has one home, one colour and one icon, so you always k
 
 ### Overview: this month in three answers
 
-<img src="docs/screenshots/overview.png" alt="Overview: income, spent and left cards, budget and transactions" width="100%" />
+<img src="docs/screenshots/overview.png" alt="Overview: income, spent and balance cards, budget and transactions" width="100%" />
 
-- **Income, Spent, Left this month** as three cards, with where the income came from, a bar per day showing where the money went, and your real bank balance next to what's left.
+- **Income, Spent, Balance** as three cards, with where the income came from and a bar per day showing where the money went. Balance carries over what earlier months left, and equals your real bank balance when an account is connected.
 - **Budget** puts the categories that went over plan first, and says in words how much is over or left ("€30.95 over plan", "€109 left").
 - **Transactions** is one list for both directions, grouped by day, with a filter for spending or income. Every row can be edited or deleted in place.
 
@@ -88,7 +88,7 @@ Every kind of information has one home, one colour and one icon, so you always k
 
 | | |
 |---|---|
-| **Bank import** | Connect a bank account through [Enable Banking](https://enablebanking.com) (PSD2). Booked transactions are imported daily, categories are learned from how you sorted earlier ones, and the real balance shows on Overview. |
+| **Bank import** | Connect a bank account through [Enable Banking](https://enablebanking.com) (PSD2). Booked transactions are imported daily, categories are learned from how you sorted earlier ones, and the real balance anchors the Balance card. |
 | **Reminders** | Web Push nudges on Sundays and at month-end to log anything you missed, even when the app is closed. |
 | **Private by design** | Email and password sign-in with sign-ups closed, and every row in the database is locked to its owner with Postgres Row Level Security. |
 | **Your data, exportable** | One click downloads a JSON backup of everything you own. |

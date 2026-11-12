@@ -526,6 +526,13 @@ export function useBankConnections(userId: string | undefined) {
   });
 }
 
+/** Real balance summed across connected accounts; null when no account has reported one yet. */
+export function useBankBalance(userId: string | undefined) {
+  const { data: connections = [] } = useBankConnections(userId);
+  const withBalance = connections.filter((c) => c.balance !== null);
+  return withBalance.length > 0 ? withBalance.reduce((sum, c) => sum + (c.balance ?? 0), 0) : null;
+}
+
 export function useDisconnectBank(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({

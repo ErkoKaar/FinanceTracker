@@ -1,7 +1,8 @@
 // The three answers at the top of a period, each in its own colour: what came in (income, mint),
-// what went out (spent, sky, with the per-day strip), and what is left (balance, plus the real bank
-// balance when one is connected). The Spent card is wider because it carries the strip.
-import { AlertTriangle, Check, Landmark } from "lucide-react";
+// what went out (spent, sky, with the per-day strip), and the balance: money on hand when the period
+// closes, split into what earlier periods carried over and what this one added or took. The Spent
+// card is wider because it carries the strip.
+import { AlertTriangle, Check } from "lucide-react";
 import { Money, RollingMoney } from "@/components/Money";
 import { DayStrip } from "@/components/DayStrip";
 import { IconChip, KIND, type Kind } from "@/components/Zone";
@@ -24,19 +25,16 @@ const bigNumber = "mt-4 block text-[2rem] font-medium leading-none tracking-[-0.
 
 export function SummaryCards({
   scope,
-  current,
   income,
   spent,
   incomeByCategory,
   expenseCount,
   overPlan,
   plannedCategories,
-  bankBalance,
+  balance,
   strip,
 }: {
   scope: "month" | "year";
-  // The period you're living in (Overview) rather than a past one opened in History.
-  current: boolean;
   income: number;
   spent: number;
   incomeByCategory: { name: string; value: number }[];
@@ -44,10 +42,11 @@ export function SummaryCards({
   // Total overspend and how many categories caused it; null when the period has no plan.
   overPlan: { amount: number; categories: number } | null;
   plannedCategories: number;
-  bankBalance: number | null;
+  // Money on hand at the end of the period, earlier periods included (see closingBalance).
+  balance: number;
   strip: Strip;
 }) {
-  const balance = income - spent;
+  const change = income - spent;
 
   return (
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -93,18 +92,18 @@ export function SummaryCards({
         </div>
       </Card>
 
-      <Card kind="neutral" label={current ? (scope === "month" ? "Left this month" : "Left this year") : "Left over"}>
+      <Card kind="neutral" label="Balance">
         <RollingMoney value={balance} className={`${bigNumber} ${balance < 0 ? "text-destructive" : ""}`} />
-        <p className="mt-3 text-sm text-muted-foreground">Income minus spending</p>
-        {bankBalance !== null && (
-          <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-4 text-sm">
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <Landmark className="size-4" />
-              Bank balance
-            </span>
-            <Money value={bankBalance} className={bankBalance < 0 ? "text-destructive" : ""} />
-          </div>
-        )}
+        <ul className="mt-4 space-y-1.5 text-sm">
+          <li className="flex items-baseline justify-between gap-3">
+            <span className="truncate text-muted-foreground">Carried over</span>
+            <Money value={balance - change} />
+          </li>
+          <li className="flex items-baseline justify-between gap-3">
+            <span className="truncate text-muted-foreground">This {scope}</span>
+            <Money value={change} />
+          </li>
+        </ul>
       </Card>
     </div>
   );

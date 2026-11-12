@@ -2,8 +2,16 @@
 // Every group header carries its own small DayStrip, so the shape of each month is visible before opening it.
 import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { useExpenses, useIncomes, useBudgets, type Expense, type Income, type Budget } from "@/lib/finance-data";
-import { periodLabel, stripFor, type Period } from "@/lib/period";
+import {
+  useExpenses,
+  useIncomes,
+  useBudgets,
+  useBankBalance,
+  type Expense,
+  type Income,
+  type Budget,
+} from "@/lib/finance-data";
+import { closingBalance, periodLabel, stripFor, type Period } from "@/lib/period";
 import { PeriodPanel } from "@/components/PeriodPanel";
 import { PeriodSkeleton } from "@/components/PeriodView";
 import { DayStrip } from "@/components/DayStrip";
@@ -43,6 +51,7 @@ export function HistoryView({ userId }: { userId: string }) {
   const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
   const { data: incomesAll = [], isLoading: incomesLoading } = useIncomes(userId);
   const { data: budgetsAll = [], isLoading: budgetsLoading } = useBudgets(userId);
+  const bankBalance = useBankBalance(userId);
   const [granularity, setGranularity] = useState<"month" | "year">("month");
   const [open, setOpen] = useState<string | null | undefined>(undefined);
 
@@ -149,6 +158,7 @@ export function HistoryView({ userId }: { userId: string }) {
                     incomes={incomeItems}
                     budgets={budgetItems}
                     showTrend={granularity === "year"}
+                    balance={closingBalance(period, expensesAll, incomesAll, bankBalance)}
                     embedded
                     userId={userId}
                   />

@@ -1,6 +1,7 @@
-// "Overview" tab: the current month (expenses, income, this month's plan, bank balance) via PeriodPanel.
+// "Overview" tab: the current month (expenses, income, this month's plan, balance) via PeriodPanel.
 import { useMemo } from "react";
-import { useExpenses, useIncomes, useBudgets, useBankConnections } from "@/lib/finance-data";
+import { useExpenses, useIncomes, useBudgets, useBankBalance } from "@/lib/finance-data";
+import { closingBalance, type Period } from "@/lib/period";
 import { PeriodPanel } from "@/components/PeriodPanel";
 
 // Placeholder in the shape of the title and summary cards, so the page doesn't jump when data arrives.
@@ -21,7 +22,7 @@ export function PeriodView({ userId }: { userId: string }) {
   const { data: expensesAll = [], isLoading: expensesLoading } = useExpenses(userId);
   const { data: incomesAll = [], isLoading: incomesLoading } = useIncomes(userId);
   const { data: budgetsAll = [], isLoading: budgetsLoading } = useBudgets(userId);
-  const { data: bankConnections = [] } = useBankConnections(userId);
+  const bankBalance = useBankBalance(userId);
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -42,18 +43,15 @@ export function PeriodView({ userId }: { userId: string }) {
     return <PeriodSkeleton />;
   }
 
-  // Real balance straight from the bank — a "now" number, so it only belongs on the current
-  // month (Overview), not on history periods. Null when no account has reported one yet.
-  const withBalance = bankConnections.filter((c) => c.balance !== null);
-  const bankBalance = withBalance.length > 0 ? withBalance.reduce((sum, c) => sum + (c.balance ?? 0), 0) : null;
+  const period: Period = { kind: "month", year, month };
 
   return (
     <PeriodPanel
-      period={{ kind: "month", year, month }}
+      period={period}
       expenses={expenses}
       incomes={incomes}
       budgets={budgets}
-      bankBalance={bankBalance}
+      balance={closingBalance(period, expensesAll, incomesAll, bankBalance)}
       userId={userId}
     />
   );

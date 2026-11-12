@@ -1,5 +1,5 @@
 // Everything about one period (a month, or a year / month inside History), always in the same three
-// zones and the same order: the summary cards (income, spent, left), the plan comparison (or
+// zones and the same order: the summary cards (income, spent, balance), the plan comparison (or
 // spending per category for years) and the transactions list. Used by PeriodView and HistoryView.
 import { useMemo } from "react";
 import { useCategories, type Expense, type Income, type Budget } from "@/lib/finance-data";
@@ -21,7 +21,7 @@ export function PeriodPanel({
   incomes,
   budgets,
   showTrend = false,
-  bankBalance = null,
+  balance,
   embedded = false,
   userId,
 }: {
@@ -34,9 +34,8 @@ export function PeriodPanel({
   // True for a full-year period (History "Years" groups) — shows the month-by-month trend chart,
   // which needs a full year of data to be meaningful.
   showTrend?: boolean;
-  // Real account balance from the bank (sum across connected accounts). Only passed on the
-  // current-month view — it's a "now" number, meaningless on year/history periods.
-  bankBalance?: number | null;
+  // Money on hand when the period closes, earlier periods included (closingBalance in lib/period).
+  balance: number;
   // Inside a History accordion: the group header already names the period, so no page title.
   embedded?: boolean;
   userId: string;
@@ -90,14 +89,13 @@ export function PeriodPanel({
 
       <SummaryCards
         scope={period.kind}
-        current={!embedded}
         income={income}
         spent={total}
         incomeByCategory={byIncomeCat}
         expenseCount={expenses.length}
         overPlan={overPlan}
         plannedCategories={budgetMap ? Object.keys(budgetMap).length : 0}
-        bankBalance={bankBalance}
+        balance={balance}
         strip={strip}
       />
 

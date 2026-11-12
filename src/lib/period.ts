@@ -1,5 +1,6 @@
 // Pure date-bucketing helpers shared by the Month/Year/History views: per-day and per-month totals
-// (for the DayStrip) and day grouping for entry lists. All dates are bucketed in local time.
+// (for the DayStrip), the running balance and day grouping for entry lists. All dates are bucketed in
+// local time.
 
 type Dated = { date: string; amount: number };
 
@@ -32,6 +33,32 @@ export function stripFor(period: Period, expenses: Dated[]) {
     startLabel: `1 ${monthName}`,
     endLabel: `${daysInMonth(period.year, period.month)} ${monthName}`,
   };
+}
+
+/**
+ * Money on hand when `period` closes: everything earned minus everything spent up to its end, so a
+ * period starts from what the previous one left instead of from zero. The tracker's own sum starts
+ * at zero on the first entry while the account did not, so with a bank balance the running total is
+ * shifted to equal it today; earlier periods are then that balance counted backwards.
+ */
+export function closingBalance(period: Period, expenses: Dated[], incomes: Dated[], bankBalance: number | null) {
+  const end = (
+    period.kind === "year" ? new Date(period.year + 1, 0, 1) : new Date(period.year, period.month, 1)
+  ).getTime();
+  const now = Date.now();
+  let untilEnd = 0;
+  let untilNow = 0;
+  const add = (items: Dated[], sign: 1 | -1) => {
+    for (const item of items) {
+      const t = new Date(item.date).getTime();
+      if (t < end) untilEnd += sign * item.amount;
+      // The bank knows nothing about entries dated ahead, so they stay out of the anchor.
+      if (t <= now) untilNow += sign * item.amount;
+    }
+  };
+  add(incomes, 1);
+  add(expenses, -1);
+  return bankBalance === null ? untilEnd : untilEnd + bankBalance - untilNow;
 }
 
 export function daysInMonth(year: number, month: number) {
